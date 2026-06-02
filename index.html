@@ -421,7 +421,8 @@ let S = {
   tab: 'fixture',
   matchIndex: 0,
   groupFilter: 'Todos',
-  avatar: null, // base64 photo of current user
+  avatar: null,
+  isAdmin: false,
 };
 
 // Pending inputs before save
@@ -508,13 +509,37 @@ function render() {
 
 function renderWelcome(app) {
   const plist = Object.keys(S.players);
+  const totalPlayers = plist.length;
+  const pool = totalPlayers * 10000;
+  const prize1 = Math.round(pool * 0.60);
+  const prize2 = Math.round(pool * 0.30);
+  const prize3 = Math.round(pool * 0.10);
+  const fmt = n => '$' + n.toLocaleString('es-AR');
+
   app.innerHTML=`
   <div class="welcome">
     <div class="welcome-card">
       <div class="wc-ball">⚽</div>
       <div class="wc-title">PRODE</div>
       <div class="wc-sub">Mundial 2026 · USA · CAN · MEX</div>
-      <div class="wc-desc">Ingresá tu nombre para sumarte al prode familiar. Tus pronósticos se guardan automáticamente.</div>
+      ${pool>0?`<div style="display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap;">
+        <div style="background:linear-gradient(135deg,#ffd700,#ffec6e);border-radius:14px;padding:12px 18px;text-align:center;min-width:90px;">
+          <div style="font-size:26px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#92400e;">1° PREMIO</div>
+          <div style="font-size:16px;font-weight:900;color:#78350f;">${fmt(prize1)}</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#e2e8f0,#f8fafc);border-radius:14px;padding:12px 18px;text-align:center;min-width:90px;">
+          <div style="font-size:26px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#475569;">2° PREMIO</div>
+          <div style="font-size:16px;font-weight:900;color:#334155;">${fmt(prize2)}</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fed7aa,#fef3c7);border-radius:14px;padding:12px 18px;text-align:center;min-width:90px;">
+          <div style="font-size:26px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#92400e;">3° PREMIO</div>
+          <div style="font-size:16px;font-weight:900;color:#78350f;">${fmt(prize3)}</div>
+        </div>
+      </div>`:`<div style="font-size:13px;color:var(--muted);margin:12px 0 4px;">Cada jugador suma $10.000 al pozo 💵</div>`}
+      <div class="wc-desc">Ingresá tu nombre y contraseña para sumarte al prode.</div>
       <div class="avatar-picker">
         <div class="avatar-big" onclick="document.getElementById('avatarFileIn').click()">
           ${S.avatar?`<img src="${S.avatar}" alt="foto">`:`<span id="avatarInitial">?</span>`}
@@ -524,7 +549,10 @@ function renderWelcome(app) {
       </div>
       <label class="input-lbl">¿Cómo te llamás?</label>
       <input class="wc-input" id="nameIn" type="text" placeholder="Ej: Martín" maxlength="24" autocomplete="off"/>
-      <br><br>
+      <label class="input-lbl" style="margin-top:12px;">Contraseña</label>
+      <input class="wc-input" id="passIn" type="password" placeholder="Contraseña" maxlength="32" autocomplete="off"/>
+      <div id="loginError" style="color:#ef4444;font-size:13px;font-weight:700;min-height:18px;margin-top:6px;text-align:center;"></div>
+      <br>
       <button class="btn-join" onclick="doJoin()">ENTRAR AL PRODE ⚽</button>
       ${plist.length?`<div class="existing-players">
         <div class="ep-title">Ya están jugando (${plist.length})</div>
@@ -533,7 +561,9 @@ function renderWelcome(app) {
     </div>
   </div>`;
   const inp=document.getElementById('nameIn');
-  if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')doJoin();});setTimeout(()=>inp.focus(),100);}
+  const passInp=document.getElementById('passIn');
+  if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&passInp)passInp.focus();});setTimeout(()=>inp.focus(),100);}
+  if(passInp){passInp.addEventListener('keydown',e=>{if(e.key==='Enter')doJoin();});}
 }
 
 function renderMain(app) {
@@ -556,7 +586,7 @@ function renderMain(app) {
   <div class="tabs">
     <div class="tab ${S.tab==='fixture'?'active':''}" onclick="setTab('fixture')">Mis pronósticos</div>
     <div class="tab ${S.tab==='ranking'?'active':''}" onclick="setTab('ranking')">Ranking</div>
-    <div class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Resultados</div>
+    ${S.isAdmin?`<div class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Resultados ⚙️</div>`:''}
     <div class="tab ${S.tab==='rules'?'active':''}" onclick="setTab('rules')">Reglas</div>
   </div>
   <div id="tabContent"></div>`;
@@ -706,12 +736,36 @@ function autoSaveHint() {
 // ── ACTIONS ──
 window.doJoin=async function(){
   const inp=document.getElementById('nameIn');
+  const passInp=document.getElementById('passIn');
+  const errEl=document.getElementById('loginError');
   const name=(inp?inp.value:'').trim();
+  const pass=(passInp?passInp.value:'').trim();
   if(!name){if(inp)inp.focus();return;}
+  if(!pass){if(errEl)errEl.textContent='Ingresá una contraseña';if(passInp)passInp.focus();return;}
+
+  const existing = S.players[name];
+
+  // Si ya existe, verificar contraseña
+  if(existing){
+    if(existing.pass && existing.pass !== pass){
+      if(errEl)errEl.textContent='Contraseña incorrecta';
+      if(passInp){passInp.value='';passInp.focus();}
+      return;
+    }
+  }
+
   S.user=name;
   try{localStorage.setItem('prode26:me',name);}catch(e){}
+  try{localStorage.setItem('prode26:pass:'+name,pass);}catch(e){}
   if(S.avatar){try{localStorage.setItem('prode26:avatar:'+name,S.avatar);}catch(e){}}
-  if(!S.players[name]){S.players[name]={predictions:{},joined:Date.now()};await savePlayers();}
+
+  const isFirstUser = Object.keys(S.players).length === 0;
+
+  if(!existing){
+    S.players[name]={predictions:{},joined:Date.now(),pass,isAdmin:isFirstUser};
+  }
+  S.isAdmin = S.players[name].isAdmin === true;
+  await savePlayers();
   S.screen='main'; S.matchIndex=0;
   render();
 };
@@ -818,19 +872,52 @@ function buildRanking() {
   const posIcons=['🥇','🥈','🥉'];
   const posClasses=['p1','p2','p3'];
 
+  const totalPlayers = rows.length;
+  const pool = totalPlayers * 10000;
+  const prize1 = Math.round(pool * 0.60);
+  const prize2 = Math.round(pool * 0.30);
+  const prize3 = Math.round(pool * 0.10);
+  const fmt = n => '$' + n.toLocaleString('es-AR');
+
   return `<div class="rank-wrap">
     <div class="stats-row">
       <div class="stat-box"><div class="stat-n">${me.pts}</div><div class="stat-l">Mis puntos</div></div>
       <div class="stat-box"><div class="stat-n">#${myRank}</div><div class="stat-l">Posición</div></div>
       <div class="stat-box"><div class="stat-n">${me.exact}</div><div class="stat-l">Exactos</div></div>
     </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-family:var(--font-head);font-size:20px;letter-spacing:1px;margin-bottom:10px;text-align:center;">💵 POZO TOTAL: ${fmt(pool)}</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <div style="background:linear-gradient(135deg,#ffd700,#ffec6e);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #ffd70044;">
+          <div style="font-size:32px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:2px;">1° PREMIO · 60%</div>
+          <div style="font-size:18px;font-weight:900;color:#78350f;">${fmt(prize1)}</div>
+          ${rows[0]?`<div style="font-size:11px;color:#92400e;margin-top:4px;font-weight:700;">${rows[0].name}</div>`:''}
+        </div>
+        <div style="background:linear-gradient(135deg,#cbd5e1,#f1f5f9);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #94a3b844;">
+          <div style="font-size:32px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#475569;margin-bottom:2px;">2° PREMIO · 30%</div>
+          <div style="font-size:18px;font-weight:900;color:#334155;">${fmt(prize2)}</div>
+          ${rows[1]?`<div style="font-size:11px;color:#475569;margin-top:4px;font-weight:700;">${rows[1].name}</div>`:''}
+        </div>
+        <div style="background:linear-gradient(135deg,#fed7aa,#fef3c7);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #fb923c44;">
+          <div style="font-size:32px;">💰</div>
+          <div style="font-size:11px;font-weight:800;color:#c2410c;margin-bottom:2px;">3° PREMIO · 10%</div>
+          <div style="font-size:18px;font-weight:900;color:#9a3412;">${fmt(prize3)}</div>
+          ${rows[2]?`<div style="font-size:11px;color:#c2410c;margin-top:4px;font-weight:700;">${rows[2].name}</div>`:''}
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">Cada jugador aporta $10.000 · ${totalPlayers} jugador${totalPlayers!==1?'es':''} inscripto${totalPlayers!==1?'s':''}</div>
+    </div>
+
     <div style="font-family:var(--font-head);font-size:24px;letter-spacing:1px;margin-bottom:14px;">🏆 Ranking</div>
     ${rows.map((r,i)=>`
       <div class="rank-card ${r.name===S.user?'is-me':''}">
         <div class="rank-pos ${posClasses[i]||'pn'}">${posIcons[i]||i+1}</div>
         <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;color:white;overflow:hidden;flex-shrink:0;">${r.av?`<img src="${r.av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`${r.name.charAt(0).toUpperCase()}`}</div>
         <div class="rank-body">
-          <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}</div>
+          <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}${(S.players[r.name]||{}).isAdmin?'<span class="you-tag" style="background:#7c3aed;">ADMIN</span>':''}</div>
           <div class="rank-sub">⭐ ${r.exact} exactos · ✓ ${r.correct} resultados · ${r.done} pronósticos</div>
         </div>
         <div class="rank-pts-big">${r.pts}</div>
@@ -900,8 +987,10 @@ function buildRules() {
 (async function(){
   render();
   await loadAll();
-  if(S.user&&S.players[S.user]) { S.screen='main'; }
-  else if(S.user) { S.players[S.user]={predictions:{},joined:Date.now()};await savePlayers();S.screen='main'; }
+  if(S.user&&S.players[S.user]) {
+    S.isAdmin = S.players[S.user].isAdmin === true;
+    S.screen='main';
+  }
   else { S.screen='welcome'; }
   // Start at first unpredicted match
   if(S.screen==='main') {
