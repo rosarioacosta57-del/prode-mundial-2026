@@ -273,7 +273,7 @@ input[type=number] { -moz-appearance: textfield; }
 <body>
 <div id="app"></div>
 <div class="toast" id="toast"></div>
-<script>
+<script type="module">
 // ── DATA ──
 const TEAMS = {
   'Argentina':'🇦🇷','Alemania':'🇩🇪','Francia':'🇫🇷','Brasil':'🇧🇷',
@@ -423,25 +423,49 @@ let S = {
 // Pending inputs before save
 let pendingL = '', pendingV = '';
 
+// ── FIREBASE ──
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCYVE_MzZVK4p3aC0_8Zl9DJG0kTASmt_E",
+  authDomain: "prode-mundial-2026-21635.firebaseapp.com",
+  projectId: "prode-mundial-2026-21635",
+  storageBucket: "prode-mundial-2026-21635.firebasestorage.app",
+  messagingSenderId: "693826289592",
+  appId: "1:693826289592:web:99984845539a145bdb594d"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
 // ── STORAGE ──
 async function loadAll() {
   try {
     const [pr, rr] = await Promise.all([
-      window.storage.get('prode26:players', true),
-      window.storage.get('prode26:results', true),
+      getDoc(doc(db, 'prode26', 'players')),
+      getDoc(doc(db, 'prode26', 'results')),
     ]);
-    if (pr) S.players = JSON.parse(pr.value);
-    if (rr) S.results = JSON.parse(rr.value);
+    if (pr.exists()) S.players = pr.data().data || {};
+    if (rr.exists()) S.results = rr.data().data || {};
   } catch(e) { S.players={}; S.results={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
+
+  // Escuchar cambios en tiempo real
+  onSnapshot(doc(db, 'prode26', 'players'), (snap) => {
+    if(snap.exists()) { S.players = snap.data().data || {}; renderTab(); }
+  });
+  onSnapshot(doc(db, 'prode26', 'results'), (snap) => {
+    if(snap.exists()) { S.results = snap.data().data || {}; renderTab(); }
+  });
 }
 
 async function savePlayers() {
-  try { await window.storage.set('prode26:players', JSON.stringify(S.players), true); } catch(e){}
+  try { await setDoc(doc(db, 'prode26', 'players'), { data: S.players }); } catch(e){ console.error(e); }
 }
 async function saveResults() {
-  try { await window.storage.set('prode26:results', JSON.stringify(S.results), true); } catch(e){}
+  try { await setDoc(doc(db, 'prode26', 'results'), { data: S.results }); } catch(e){ console.error(e); }
 }
 
 // ── UTILS ──
