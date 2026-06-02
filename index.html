@@ -586,6 +586,7 @@ function renderMain(app) {
   <div class="tabs">
     <div class="tab ${S.tab==='fixture'?'active':''}" onclick="setTab('fixture')">Mis pronósticos</div>
     <div class="tab ${S.tab==='ranking'?'active':''}" onclick="setTab('ranking')">Ranking</div>
+    <div class="tab ${S.tab==='comparar'?'active':''}" onclick="setTab('comparar')">Comparar</div>
     ${S.isAdmin?`<div class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Resultados ⚙️</div>`:''}
     <div class="tab ${S.tab==='rules'?'active':''}" onclick="setTab('rules')">Reglas</div>
   </div>
@@ -598,6 +599,7 @@ function renderTab() {
   if(!el)return;
   if(S.tab==='fixture') el.innerHTML=buildFixtureOneByOne();
   else if(S.tab==='ranking') el.innerHTML=buildRanking();
+  else if(S.tab==='comparar') el.innerHTML=buildComparar();
   else if(S.tab==='results') el.innerHTML=buildResults();
   else el.innerHTML=buildRules();
   attachInputListeners();
@@ -922,6 +924,74 @@ function buildRanking() {
         </div>
         <div class="rank-pts-big">${r.pts}</div>
       </div>`).join('')}
+  </div>`;
+}
+
+// ── COMPARAR ──
+function buildComparar() {
+  const players = Object.keys(S.players);
+  const played = MATCHES.filter(m => {
+    const r = S.results[m.id];
+    return r && r.l !== undefined && r.l !== '' && r.v !== undefined && r.v !== '';
+  });
+
+  if(!played.length) return `<div class="rank-wrap"><div class="empty"><div class="empty-icon">⏳</div><div>Todavía no hay resultados cargados.<br>Volvé cuando empiece el Mundial.</div></div></div>`;
+
+  return `<div class="rank-wrap">
+    <div style="font-family:var(--font-head);font-size:22px;letter-spacing:1px;margin-bottom:4px;">📊 Resultados vs Pronósticos</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${played.length} partido${played.length!==1?'s':''} jugado${played.length!==1?'s':''}</div>
+    ${played.map(m => {
+      const r = S.results[m.id];
+      const flagL = TEAMS[m.local]||'🏳';
+      const flagV = TEAMS[m.visita]||'🏳';
+      const resLabel = +r.l > +r.v ? m.local : +r.v > +r.l ? m.visita : 'Empate';
+
+      return `<div style="background:var(--card);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px #0001;">
+        <div style="background:var(--green);color:white;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;font-weight:700;opacity:.85;">Grupo ${m.grupo} · ${m.fecha}</span>
+          <span style="font-size:11px;font-weight:700;opacity:.85;">${m.sede}</span>
+        </div>
+        <div style="padding:12px 14px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px;">
+            <div style="text-align:center;flex:1;">
+              <div style="font-size:22px;">${flagL}</div>
+              <div style="font-size:12px;font-weight:800;">${m.local}</div>
+            </div>
+            <div style="text-align:center;background:var(--green);color:white;padding:8px 16px;border-radius:12px;min-width:70px;">
+              <div style="font-size:22px;font-family:var(--font-head);letter-spacing:2px;">${r.l} — ${r.v}</div>
+              <div style="font-size:10px;font-weight:700;opacity:.85;">RESULTADO</div>
+            </div>
+            <div style="text-align:center;flex:1;">
+              <div style="font-size:22px;">${flagV}</div>
+              <div style="font-size:12px;font-weight:800;">${m.visita}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;">
+            <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Pronósticos</div>
+            ${players.length === 0 ? '<div style="font-size:12px;color:var(--muted);">Sin jugadores</div>' :
+              players.map(name => {
+                const pred = ((S.players[name]||{}).predictions||{})[m.id];
+                const pts = calcPoints(pred, r);
+                let badge = '';
+                let rowBg = '';
+                if(pts === 3){ badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">⭐ +3</span>`; rowBg='background:#f0fdf4;'; }
+                else if(pts === 2){ badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✓ +2</span>`; rowBg='background:#fefce8;'; }
+                else if(pts === 0){ badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✗ 0</span>`; rowBg='background:#fff5f5;'; }
+                else { badge=`<span style="background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">— sin pronóstico</span>`; }
+                let av=null;try{av=localStorage.getItem('prode26:avatar:'+name);}catch(e){}
+                const predTxt = pred && pred.l!=='' && pred.v!=='' ? `${pred.l} — ${pred.v}` : '?';
+                return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;${rowBg}">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;overflow:hidden;flex-shrink:0;">${av?`<img src="${av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`${name.charAt(0).toUpperCase()}`}</div>
+                  <div style="flex:1;font-size:13px;font-weight:700;">${name}${name===S.user?' <span style="font-size:10px;color:var(--blue);font-weight:800;">VOS</span>':''}</div>
+                  <div style="font-size:13px;font-family:var(--font-head);letter-spacing:1px;color:var(--text);">${predTxt}</div>
+                  <div>${badge}</div>
+                </div>`;
+              }).join('')
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
   </div>`;
 }
 
