@@ -286,6 +286,7 @@ const TEAMS = {
   'Egipto':'🇪🇬','RD de Congo':'🇨🇩','Haití':'🇭🇹','Panamá':'🇵🇦',
   'Corea del Sur':'🇰🇷','Japón':'🇯🇵','Australia':'🇦🇺','Irán':'🇮🇷',
   'Arabia Saudita':'🇸🇦','Qatar':'🇶🇦','Uzbekistán':'🇺🇿','República Checa':'🇨🇿',
+  'Chile':'🇨🇱','Italia':'🇮🇹',
   'Bosnia y Herzegovina':'🇧🇦','Croacia':'🇭🇷','Suiza':'🇨🇭','Austria':'🇦🇹',
   'Suecia':'🇸🇪','Noruega':'🇳🇴','Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Turquía':'🇹🇷',
   'Bélgica':'🇧🇪','Jordania':'🇯🇴','Argelia':'🇩🇿','Túnez':'🇹🇳',
@@ -366,6 +367,7 @@ const MATCHES = [
   {id:70,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'Colombia',visita:'Uzbekistán',sede:'Atlanta'},
   {id:71,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Croacia',visita:'Inglaterra',sede:'Los Ángeles'},
   {id:72,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Panamá',visita:'Ghana',sede:'San Francisco'},
+  {id:99,grupo:'A',fecha:'Mar 2 Jun',hora:'19:00',local:'Chile',visita:'Italia',sede:'Buenos Aires (PRUEBA)'},
 ];
 
 const GROUPS = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -390,6 +392,7 @@ const MATCH_DATES = {
   61:'2026-06-27T16:00',62:'2026-06-27T16:00',63:'2026-06-27T20:00',64:'2026-06-27T20:00',
   65:'2026-06-28T16:00',66:'2026-06-28T16:00',67:'2026-06-28T20:00',68:'2026-06-28T20:00',
   69:'2026-06-29T16:00',70:'2026-06-29T16:00',71:'2026-06-29T20:00',72:'2026-06-29T20:00',
+  99:'2026-06-02T19:00',
 };
 function isMatchLocked(matchId) {
   const dt = MATCH_DATES[matchId];
@@ -423,6 +426,7 @@ let S = {
   groupFilter: 'Todos',
   avatar: null,
   isAdmin: false,
+  fixtureView: 'card', // 'card' | 'list'
 };
 
 // Pending inputs before save
@@ -611,6 +615,8 @@ function getFilteredMatches() {
 }
 
 function buildFixtureOneByOne() {
+  if(S.fixtureView==='list') return buildFixtureList();
+
   const filtered = getFilteredMatches();
   if(!filtered.length) return `<div class="empty"><div class="empty-icon">🔍</div>Sin partidos</div>`;
 
@@ -647,7 +653,13 @@ function buildFixtureOneByOne() {
   <div class="fixture-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div style="font-size:12px;color:var(--muted);font-weight:700;">Partido ${S.matchIndex+1} de ${filtered.length}</div>
-      <div style="font-size:12px;color:var(--muted);font-weight:700;">${totalDone}/${MATCHES.length} guardados · ${pct}%</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;">${totalDone}/${MATCHES.length} guardados · ${pct}%</div>
+        <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+          <button onclick="setFixtureView('card')" style="padding:4px 10px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:${S.fixtureView==='card'?'var(--green)':'transparent'};color:${S.fixtureView==='card'?'white':'var(--muted)'};">🃏</button>
+          <button onclick="setFixtureView('list')" style="padding:4px 10px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:${S.fixtureView==='list'?'var(--green)':'transparent'};color:${S.fixtureView==='list'?'white':'var(--muted)'};">☰</button>
+        </div>
+      </div>
     </div>
     <div class="match-progress"><div class="match-progress-fill" style="width:${pct}%"></div></div>
 
@@ -711,6 +723,78 @@ function getJornada(id) {
   if(id<=24)return 1;
   if(id<=48)return 2;
   return 3;
+}
+
+window.setFixtureView=function(v){ S.fixtureView=v; renderTab(); };
+
+window.jumpToMatch=function(matchId){
+  S.fixtureView='card';
+  S.groupFilter='Todos';
+  const idx = MATCHES.findIndex(m=>m.id===matchId);
+  if(idx>=0) S.matchIndex=idx;
+  renderTab();
+};
+
+function buildFixtureList() {
+  const preds = myPreds();
+  const totalDone = MATCHES.filter(m=>{const p=preds[m.id];return p&&p.l!==''&&p.v!=='';}).length;
+  const pct = Math.round(totalDone/MATCHES.length*100);
+
+  const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+  return `<div class="fixture-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:13px;font-weight:800;color:var(--text);">Mis guardados</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;">${totalDone}/${MATCHES.length} · ${pct}%</div>
+        <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+          <button onclick="setFixtureView('card')" style="padding:4px 10px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--muted);">🃏</button>
+          <button onclick="setFixtureView('list')" style="padding:4px 10px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:var(--green);color:white;">☰</button>
+        </div>
+      </div>
+    </div>
+    <div class="match-progress"><div class="match-progress-fill" style="width:${pct}%"></div></div>
+
+    <div style="margin-top:14px;">
+    ${groups.map(g => {
+      const gMatches = MATCHES.filter(m=>m.grupo===g);
+      return `<div style="margin-bottom:18px;">
+        <div style="font-family:var(--font-head);font-size:16px;letter-spacing:1px;color:var(--green);margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--green);">GRUPO ${g}</div>
+        ${gMatches.map(m => {
+          const pred = preds[m.id];
+          const hasPred = pred && pred.l!=='' && pred.v!=='';
+          const result = S.results[m.id];
+          const hasResult = result && result.l!==undefined && result.v!==undefined;
+          const locked = isMatchLocked(m.id);
+          const pts = hasPred && hasResult ? calcPoints(pred, result) : null;
+
+          let rowBg = 'background:var(--card);';
+          let badge = '';
+          if(pts===3){ rowBg='background:#f0fdf4;'; badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">⭐+3</span>`; }
+          else if(pts===2){ rowBg='background:#fefce8;'; badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✓+2</span>`; }
+          else if(pts===0){ rowBg='background:#fff5f5;'; badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✗0</span>`; }
+          else if(hasPred && locked){ badge=`<span style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">🔒</span>`; }
+          else if(hasPred){ badge=`<span style="background:#dbeafe;color:#2563eb;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✓</span>`; }
+          else if(locked){ badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">🔒</span>`; }
+          else { badge=`<span style="background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;">pendiente</span>`; }
+
+          const predTxt = hasPred ? `<span style="font-family:var(--font-head);font-size:15px;letter-spacing:1px;color:var(--green);">${pred.l}—${pred.v}</span>` : `<span style="color:var(--muted);font-size:13px;">—</span>`;
+
+          return `<div onclick="jumpToMatch(${m.id})" style="${rowBg}border-radius:10px;padding:9px 12px;margin-bottom:5px;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--border);">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${TEAMS[m.local]||'🏳'} ${m.local} <span style="color:var(--muted);font-weight:400;">vs</span> ${TEAMS[m.visita]||'🏳'} ${m.visita}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:1px;">${m.fecha} · ${m.hora}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              ${predTxt}
+              ${badge}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
 }
 
 function attachInputListeners() {
@@ -812,8 +896,11 @@ window.changeAvatar=function(){
 
 window.setTab=function(t){
   S.tab=t; S.matchIndex=0;
-  document.querySelectorAll('.tab').forEach((el,i)=>{
-    el.classList.toggle('active',['fixture','ranking','results','rules'][i]===t);
+  const tabs=['fixture','ranking','comparar','results','rules'];
+  document.querySelectorAll('.tab').forEach((el)=>{
+    const onclick=el.getAttribute('onclick')||'';
+    const match=onclick.match(/setTab\('(\w+)'\)/);
+    if(match) el.classList.toggle('active', match[1]===t);
   });
   renderTab();
 };
@@ -930,17 +1017,90 @@ function buildRanking() {
 // ── COMPARAR ──
 function buildComparar() {
   const players = Object.keys(S.players);
-  const played = MATCHES.filter(m => {
+  const allPlayed = MATCHES.filter(m => {
     const r = S.results[m.id];
     return r && r.l !== undefined && r.l !== '' && r.v !== undefined && r.v !== '';
   });
 
-  if(!played.length) return `<div class="rank-wrap"><div class="empty"><div class="empty-icon">⏳</div><div>Todavía no hay resultados cargados.<br>Volvé cuando empiece el Mundial.</div></div></div>`;
+  if(!allPlayed.length) return `<div class="rank-wrap"><div class="empty"><div class="empty-icon">⏳</div><div>Todavía no hay resultados cargados.<br>Volvé cuando empiece el Mundial.</div></div></div>`;
+
+  // Filtro activo
+  const cf = S.compararFilter || 'Todos';
+  const co = S.compararOrder || 'recientes';
+
+  let played = cf === 'Todos' ? allPlayed : allPlayed.filter(m => m.grupo === cf);
+  if(co === 'recientes') played = [...played].reverse();
+
+  const filterBtns = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L'].map(g =>
+    `<button class="f-btn ${cf===g?'active':''}" onclick="setCmpFilter('${g}')">${g}</button>`
+  ).join('');
 
   return `<div class="rank-wrap">
     <div style="font-family:var(--font-head);font-size:22px;letter-spacing:1px;margin-bottom:4px;">📊 Resultados vs Pronósticos</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${played.length} partido${played.length!==1?'s':''} jugado${played.length!==1?'s':''}</div>
-    ${played.map(m => {
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;color:var(--muted);">${allPlayed.length} partido${allPlayed.length!==1?'s':''} jugado${allPlayed.length!==1?'s':''}</div>
+      <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <button onclick="setCmpOrder('recientes')" style="padding:5px 12px;font-size:11px;font-weight:800;border:none;cursor:pointer;background:${co==='recientes'?'var(--green)':'transparent'};color:${co==='recientes'?'white':'var(--muted)'};">🕐 Recientes</button>
+        <button onclick="setCmpOrder('grupo')" style="padding:5px 12px;font-size:11px;font-weight:800;border:none;cursor:pointer;background:${co==='grupo'?'var(--green)':'transparent'};color:${co==='grupo'?'white':'var(--muted)'};">A→Z Grupo</button>
+      </div>
+    </div>
+    <div class="filter-row" style="margin-bottom:14px;">
+      ${filterBtns}
+    </div>
+    ${played.length === 0 ? `<div class="empty"><div class="empty-icon">🔍</div>Sin partidos en este grupo todavía</div>` :
+    played.map(m => {
+      const r = S.results[m.id];
+      const flagL = TEAMS[m.local]||'🏳';
+      const flagV = TEAMS[m.visita]||'🏳';
+
+      return `<div style="background:var(--card);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px #0001;">
+        <div style="background:var(--green);color:white;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;font-weight:700;opacity:.85;">Grupo ${m.grupo} · ${m.fecha}</span>
+          <span style="font-size:11px;font-weight:700;opacity:.85;">${m.sede}</span>
+        </div>
+        <div style="padding:12px 14px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px;">
+            <div style="text-align:center;flex:1;">
+              <div style="font-size:22px;">${flagL}</div>
+              <div style="font-size:12px;font-weight:800;">${m.local}</div>
+            </div>
+            <div style="text-align:center;background:var(--green);color:white;padding:8px 16px;border-radius:12px;min-width:70px;">
+              <div style="font-size:22px;font-family:var(--font-head);letter-spacing:2px;">${r.l} — ${r.v}</div>
+              <div style="font-size:10px;font-weight:700;opacity:.85;">RESULTADO</div>
+            </div>
+            <div style="text-align:center;flex:1;">
+              <div style="font-size:22px;">${flagV}</div>
+              <div style="font-size:12px;font-weight:800;">${m.visita}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;">
+            <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Pronósticos</div>
+            ${players.length === 0 ? '<div style="font-size:12px;color:var(--muted);">Sin jugadores</div>' :
+              players.map(name => {
+                const pred = ((S.players[name]||{}).predictions||{})[m.id];
+                const pts = calcPoints(pred, r);
+                let badge = '';
+                let rowBg = '';
+                if(pts === 3){ badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">⭐ +3</span>`; rowBg='background:#f0fdf4;'; }
+                else if(pts === 2){ badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✓ +2</span>`; rowBg='background:#fefce8;'; }
+                else if(pts === 0){ badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✗ 0</span>`; rowBg='background:#fff5f5;'; }
+                else { badge=`<span style="background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">— sin pronóstico</span>`; }
+                let av=null;try{av=localStorage.getItem('prode26:avatar:'+name);}catch(e){}
+                const predTxt = pred && pred.l!=='' && pred.v!=='' ? `${pred.l} — ${pred.v}` : '?';
+                return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;${rowBg}">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;overflow:hidden;flex-shrink:0;">${av?`<img src="${av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`${name.charAt(0).toUpperCase()}`}</div>
+                  <div style="flex:1;font-size:13px;font-weight:700;">${name}${name===S.user?' <span style="font-size:10px;color:var(--blue);font-weight:800;">VOS</span>':''}</div>
+                  <div style="font-size:13px;font-family:var(--font-head);letter-spacing:1px;color:var(--text);">${predTxt}</div>
+                  <div>${badge}</div>
+                </div>`;
+              }).join('')
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
       const r = S.results[m.id];
       const flagL = TEAMS[m.local]||'🏳';
       const flagV = TEAMS[m.visita]||'🏳';
@@ -994,6 +1154,9 @@ function buildComparar() {
     }).join('')}
   </div>`;
 }
+
+window.setCmpFilter=function(g){ S.compararFilter=g; renderTab(); };
+window.setCmpOrder=function(o){ S.compararOrder=o; renderTab(); };
 
 // ── RESULTS (admin) ──
 function buildResults() {
