@@ -351,22 +351,22 @@ const MATCHES = [
   {id:54,grupo:'D',fecha:'Jue 25 Jun',hora:'16:00',local:'Turquía',visita:'Estados Unidos',sede:'Kansas City'},
   {id:55,grupo:'C',fecha:'Jue 25 Jun',hora:'20:00',local:'Marruecos',visita:'Haití',sede:'Dallas'},
   {id:56,grupo:'C',fecha:'Jue 25 Jun',hora:'20:00',local:'Escocia',visita:'Brasil',sede:'Philadelphia'},
-  {id:57,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Suecia',visita:'Túnez',sede:'Houston'},
-  {id:58,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Japón',visita:'Países Bajos',sede:'Boston'},
+  {id:57,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Suecia',visita:'Japón',sede:'Houston'},
+  {id:58,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Países Bajos',visita:'Túnez',sede:'Boston'},
   {id:59,grupo:'E',fecha:'Vie 26 Jun',hora:'20:00',local:'Ecuador',visita:'Alemania',sede:'Los Ángeles'},
   {id:60,grupo:'E',fecha:'Vie 26 Jun',hora:'20:00',local:'Curazao',visita:'Costa de Marfil',sede:'Monterrey'},
-  {id:61,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Egipto',visita:'Bélgica',sede:'Seattle'},
-  {id:62,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Nueva Zelanda',visita:'Irán',sede:'Toronto'},
-  {id:63,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'Cabo Verde',visita:'España',sede:'Miami'},
-  {id:64,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'Arabia Saudita',visita:'Uruguay',sede:'Dallas'},
-  {id:65,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Senegal',visita:'Francia',sede:'Atlanta'},
-  {id:66,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Noruega',visita:'Irak',sede:'Nueva Jersey'},
+  {id:61,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Bélgica',visita:'Irán',sede:'Seattle'},
+  {id:62,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Egipto',visita:'Nueva Zelanda',sede:'Toronto'},
+  {id:63,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'España',visita:'Arabia Saudita',sede:'Miami'},
+  {id:64,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'Cabo Verde',visita:'Uruguay',sede:'Dallas'},
+  {id:65,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Francia',visita:'Noruega',sede:'Atlanta'},
+  {id:66,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Senegal',visita:'Irak',sede:'Nueva Jersey'},
   {id:67,grupo:'J',fecha:'Dom 28 Jun',hora:'20:00',local:'Argelia',visita:'Austria',sede:'Kansas City'},
   {id:68,grupo:'J',fecha:'Dom 28 Jun',hora:'20:00',local:'Jordania',visita:'Argentina',sede:'Vancouver'},
-  {id:69,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'RD de Congo',visita:'Portugal',sede:'Philadelphia'},
-  {id:70,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'Colombia',visita:'Uzbekistán',sede:'Atlanta'},
-  {id:71,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Croacia',visita:'Inglaterra',sede:'Los Ángeles'},
-  {id:72,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Panamá',visita:'Ghana',sede:'San Francisco'},
+  {id:69,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'Portugal',visita:'Colombia',sede:'Philadelphia'},
+  {id:70,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'RD de Congo',visita:'Uzbekistán',sede:'Atlanta'},
+  {id:71,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Inglaterra',visita:'Panamá',sede:'Los Ángeles'},
+  {id:72,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Croacia',visita:'Ghana',sede:'San Francisco'},
 ];
 
 const GROUPS = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -458,7 +458,11 @@ async function loadAll() {
 
   // Escuchar cambios en tiempo real
   db.collection('prode26').doc('players').onSnapshot(snap => {
-    if(snap.exists) { S.players = snap.data().data || {}; if(S.screen==='main') renderTab(); }
+    if(snap.exists) {
+      S.players = snap.data().data || {};
+      if(S.screen==='main') renderTab();
+      else if(S.screen==='welcome') render(); // actualiza premios en welcome
+    }
   });
   db.collection('prode26').doc('results').onSnapshot(snap => {
     if(snap.exists) { S.results = snap.data().data || {}; if(S.screen==='main') renderTab(); }
@@ -543,11 +547,16 @@ function renderWelcome(app) {
       </div>`:`<div style="font-size:13px;color:var(--muted);margin:12px 0 4px;">Cada jugador suma $10.000 al pozo 💵</div>`}
       <div class="wc-desc">Ingresá tu nombre y contraseña para sumarte al prode.</div>
       <div class="avatar-picker">
-        <div class="avatar-big" onclick="document.getElementById('avatarFileIn').click()">
-          ${S.avatar?`<img src="${S.avatar}" alt="foto">`:`<span id="avatarInitial">?</span>`}
+        <div class="avatar-big" id="avatarPreview" style="font-size:38px;cursor:default;">
+          ${S.avatar||'❓'}
         </div>
-        <span class="avatar-hint">📷 Tocá para agregar una foto (opcional)</span>
-        <input type="file" id="avatarFileIn" class="avatar-upload" accept="image/*" onchange="handleAvatarPick(this)">
+        <span class="avatar-hint">Elegí tu emoji</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;max-width:280px;">
+        ${['😎','🤩','😤','🥶','🔥','💪','🤯','😈','🥷','👑','🦾','⚡','🎯','🏆','💥',
+             '🦁','🐯','🦊','🐺','🦅','🐉','🦈','🦏','🐻','🦝','🐆','🦬','🦓','🦍','🐊','❤️','🇦🇷','💀','🐸','🐱'].map(e=>
+            `<button onclick="pickEmoji('${e}')" style="font-size:24px;background:${(S.avatar||'❓')===e?'var(--green)':'#f1f5f9'};border:2px solid ${(S.avatar||'❓')===e?'var(--green)':'transparent'};border-radius:10px;width:42px;height:42px;cursor:pointer;transition:all .15s;">${e}</button>`
+          ).join('')}
+        </div>
       </div>
       <label class="input-lbl">¿Cómo te llamás?</label>
       <input class="wc-input" id="nameIn" type="text" placeholder="Ej: Martín" maxlength="24" autocomplete="off"/>
@@ -579,8 +588,8 @@ function renderMain(app) {
         <div class="name">${S.user}</div>
         <div class="pts">${pts} pts · ${done}/${MATCHES.length}</div>
       </div>
-      <div class="avatar" onclick="changeAvatar()" title="Cambiar foto">
-        ${S.avatar?`<img src="${S.avatar}" alt="${S.user}">`:`${S.user.charAt(0).toUpperCase()}`}
+      <div class="avatar" onclick="changeAvatar()" title="Cambiar emoji" style="font-size:20px;cursor:pointer;">
+        ${S.players[S.user]&&S.players[S.user].avatar?S.players[S.user].avatar:(S.avatar||S.user.charAt(0).toUpperCase())}
       </div>
       <button class="btn-sm" onclick="doChangeUser()">Cambiar</button>
     </div>
@@ -846,9 +855,13 @@ window.doJoin=async function(){
   const isFirstUser = Object.keys(S.players).length === 0;
 
   if(!existing){
-    S.players[name]={predictions:{},joined:Date.now(),pass,isAdmin:isFirstUser};
+    S.players[name]={predictions:{},joined:Date.now(),pass,isAdmin:isFirstUser,avatar:S.avatar||'😎'};
+  } else {
+    // Update avatar if changed
+    if(S.avatar) S.players[name].avatar = S.avatar;
   }
   S.isAdmin = S.players[name].isAdmin === true;
+  S.avatar = S.players[name].avatar || '😎';
   await savePlayers();
   S.screen='main'; S.matchIndex=0;
   render();
@@ -859,37 +872,32 @@ window.doChangeUser=function(){
   S.user=null; S.avatar=null; S.screen='welcome'; render();
 };
 
-window.handleAvatarPick=function(input){
-  const file=input.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    S.avatar=e.target.result;
-    // Update preview in welcome screen
-    const big=document.querySelector('.avatar-big');
-    if(big){big.innerHTML=`<img src="${S.avatar}" alt="foto">`;}
-    // Save if already logged in
-    if(S.user){try{localStorage.setItem('prode26:avatar:'+S.user,S.avatar);}catch(e){}}
-  };
-  reader.readAsDataURL(file);
+window.changeAvatar=function(){
+  const emojis=['😎','🤩','😤','🥶','🔥','💪','🤯','😈','🥷','👑','🦾','⚡','🎯','🏆','💥',
+    '🦁','🐯','🦊','🐺','🦅','🐉','🦈','🦏','🐻','🦝','🐆','🦬','🦓','🦍','🐊','❤️','🇦🇷','💀','🐸','🐱'];
+  const current = (S.players[S.user]||{}).avatar||S.avatar||'😎';
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:white;border-radius:20px;padding:24px;max-width:320px;width:90%;">
+    <div style="font-family:var(--font-head);font-size:20px;margin-bottom:14px;text-align:center;">Cambiá tu emoji</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+      ${emojis.map(e=>`<button onclick="selectNewEmoji('${e}')" style="font-size:26px;background:${e===current?'var(--green)':'#f1f5f9'};border:2px solid ${e===current?'var(--green)':'transparent'};border-radius:10px;width:46px;height:46px;cursor:pointer;">${e}</button>`).join('')}
+    </div>
+    <button onclick="document.getElementById('emojiModal').remove()" style="margin-top:16px;width:100%;padding:10px;border:none;border-radius:10px;background:#f1f5f9;font-size:14px;font-weight:700;cursor:pointer;">Cerrar</button>
+  </div>`;
+  modal.id='emojiModal';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
 };
 
-window.changeAvatar=function(){
-  // Create a temporary file input and trigger it
-  let fin=document.getElementById('changeAvatarIn');
-  if(!fin){fin=document.createElement('input');fin.type='file';fin.accept='image/*';fin.id='changeAvatarIn';fin.style.display='none';document.body.appendChild(fin);
-    fin.onchange=function(){
-      const file=fin.files[0];if(!file)return;
-      const reader=new FileReader();
-      reader.onload=function(e){
-        S.avatar=e.target.result;
-        if(S.user){try{localStorage.setItem('prode26:avatar:'+S.user,S.avatar);}catch(e){}}
-        render();
-      };
-      reader.readAsDataURL(file);
-    };
+window.selectNewEmoji=async function(e){
+  S.avatar=e;
+  if(S.user&&S.players[S.user]){
+    S.players[S.user].avatar=e;
+    await savePlayers();
   }
-  fin.click();
+  document.getElementById('emojiModal')?.remove();
+  render();
 };
 
 window.setTab=function(t){
@@ -947,7 +955,7 @@ function buildRanking() {
     const preds=(S.players[name]||{}).predictions||{};
     let exact=0,correct=0;
     MATCHES.forEach(m=>{const p=calcPoints(preds[m.id],S.results[m.id]);if(p===3)exact++;if(p===1||p===3)correct++;});
-    let av=null;try{av=localStorage.getItem('prode26:avatar:'+name);}catch(e){}
+    let av=(S.players[name]||{}).avatar||null;
     return {name,pts,done,exact,correct,av};
   }).sort((a,b)=>b.pts-a.pts||b.exact-a.exact||b.done-a.done);
 
@@ -1002,7 +1010,7 @@ function buildRanking() {
     ${rows.map((r,i)=>`
       <div class="rank-card ${r.name===S.user?'is-me':''}">
         <div class="rank-pos ${posClasses[i]||'pn'}">${posIcons[i]||i+1}</div>
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;color:white;overflow:hidden;flex-shrink:0;">${r.av?`<img src="${r.av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`${r.name.charAt(0).toUpperCase()}`}</div>
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;color:white;overflow:hidden;flex-shrink:0;">${r.av?r.av:r.name.charAt(0).toUpperCase()}</div>
         <div class="rank-body">
           <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}${(S.players[r.name]||{}).isAdmin?'<span class="you-tag" style="background:#7c3aed;">ADMIN</span>':''}</div>
           <div class="rank-sub">⭐ ${r.exact} exactos · ✓ ${r.correct} resultados · ${r.done} pronósticos</div>
@@ -1083,10 +1091,10 @@ function buildComparar() {
                 else if(pts === 2){ badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✓ +1</span>`; rowBg='background:#fefce8;'; }
                 else if(pts === 0){ badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✗ 0</span>`; rowBg='background:#fff5f5;'; }
                 else { badge=`<span style="background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">— sin pronóstico</span>`; }
-                let av=null;try{av=localStorage.getItem('prode26:avatar:'+name);}catch(e){}
+                let av=(S.players[name]||{}).avatar||null;
                 const predTxt = pred && pred.l!=='' && pred.v!=='' ? `${pred.l} — ${pred.v}` : '?';
                 return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;${rowBg}">
-                  <div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;overflow:hidden;flex-shrink:0;">${av?`<img src="${av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:`${name.charAt(0).toUpperCase()}`}</div>
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;overflow:hidden;flex-shrink:0;">${av?av:name.charAt(0).toUpperCase()}</div>
                   <div style="flex:1;font-size:13px;font-weight:700;">${name}${name===S.user?' <span style="font-size:10px;color:var(--blue);font-weight:800;">VOS</span>':''}</div>
                   <div style="font-size:13px;font-family:var(--font-head);letter-spacing:1px;color:var(--text);">${predTxt}</div>
                   <div>${badge}</div>
