@@ -1012,7 +1012,7 @@ function buildRanking() {
         <div class="rank-pos ${posClasses[i]||'pn'}">${posIcons[i]||i+1}</div>
         <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;color:white;overflow:hidden;flex-shrink:0;">${r.av?r.av:r.name.charAt(0).toUpperCase()}</div>
         <div class="rank-body">
-          <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}${(S.players[r.name]||{}).isAdmin?'<span class="you-tag" style="background:#7c3aed;">ADMIN</span>':''}</div>
+          <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}${(S.players[r.name]||{}).isAdmin?'<span class="you-tag" style="background:#7c3aed;">ADMIN</span>':''}${(S.players[r.name]||{}).verified?'<span style="font-size:14px;margin-left:4px;" title="Pago verificado">⭐</span>':''}</div>
           <div class="rank-sub">⭐ ${r.exact} exactos · ✓ ${r.correct} resultados · ${r.done} pronósticos</div>
         </div>
         <div class="rank-pts-big">${r.pts}</div>
@@ -1111,13 +1111,40 @@ function buildComparar() {
 window.setCmpFilter=function(g){ S.compararFilter=g; renderTab(); };
 window.setCmpOrder=function(o){ S.compararOrder=o; renderTab(); };
 
+window.toggleVerified=async function(name){
+  if(!S.players[name]) return;
+  S.players[name].verified = !S.players[name].verified;
+  await savePlayers();
+  renderTab();
+};
+
 // ── RESULTS (admin) ──
 function buildResults() {
   const filtered = S.groupFilter==='Todos'?MATCHES:MATCHES.filter(m=>m.grupo===S.groupFilter);
+  const players = Object.keys(S.players);
+
   return `<div class="results-wrap">
     <div style="background:var(--gold-light);border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--gold);">
       ⚙ Modo admin — ingresá los marcadores reales para calcular puntos
     </div>
+
+    <!-- VERIFICADOS -->
+    <div style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:18px;border:1px solid var(--border);">
+      <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;margin-bottom:12px;">⭐ Verificar pagos</div>
+      ${players.map(name => {
+        const verified = (S.players[name]||{}).verified === true;
+        const av = (S.players[name]||{}).avatar || name.charAt(0).toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:18px;color:white;flex-shrink:0;">${av}</div>
+          <div style="flex:1;font-size:14px;font-weight:700;">${name}</div>
+          <button onclick="toggleVerified('${name}')" style="padding:6px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:800;background:${verified?'#fef9c3':'#f1f5f9'};color:${verified?'#ca8a04':'#64748b'};">
+            ${verified?'⭐ Verificado':'Sin verificar'}
+          </button>
+        </div>`;
+      }).join('')}
+      ${players.length===0?'<div style="font-size:13px;color:var(--muted);">Sin jugadores aún</div>':''}
+    </div>
+
     <div class="filter-row">
       ${GROUPS.map(g=>`<button class="f-btn ${S.groupFilter===g?'active':''}" onclick="setGrp('${g}')">${g}</button>`).join('')}
     </div>
