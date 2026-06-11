@@ -643,7 +643,7 @@ function buildFixtureOneByOne() {
   if(hasPred&&hasResult){
     const p=calcPoints(pred,result);
     if(p===3) ptsBadge=`<div class="pts-badges"><span class="badge badge-exact">⭐ ¡Exacto! +3 pts</span></div>`;
-    else if(p===2) ptsBadge=`<div class="pts-badges"><span class="badge badge-result">✓ Resultado correcto +1 pt</span></div>`;
+    else if(p===1) ptsBadge=`<div class="pts-badges"><span class="badge badge-result">✓ Resultado correcto +1 pt</span></div>`;
     else ptsBadge=`<div class="pts-badges"><span class="badge badge-wrong">✗ Sin puntos esta vez</span></div>`;
   } else if(hasPred){
     ptsBadge=`<div class="pts-badges"><span class="badge badge-pending">✓ Pronóstico guardado</span></div>`;
@@ -778,7 +778,7 @@ function buildFixtureList() {
           let rowBg = 'background:var(--card);';
           let badge = '';
           if(pts===3){ rowBg='background:#f0fdf4;'; badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">⭐+3</span>`; }
-          else if(pts===2){ rowBg='background:#fefce8;'; badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✓+1</span>`; }
+          else if(pts===1){ rowBg='background:#fefce8;'; badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✓+1</span>`; }
           else if(pts===0){ rowBg='background:#fff5f5;'; badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✗0</span>`; }
           else if(hasPred && locked){ badge=`<span style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">🔒</span>`; }
           else if(hasPred){ badge=`<span style="background:#dbeafe;color:#2563eb;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;white-space:nowrap;">✓</span>`; }
@@ -1080,7 +1080,11 @@ function buildComparar() {
             </div>
           </div>
           <div style="border-top:1px solid var(--border);padding-top:10px;">
-            <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Pronósticos</div>
+            <div onclick="toggleCmpPreds(${m.id})" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Pronósticos (${players.length})</div>
+              <div id="cmp-arrow-${m.id}" style="font-size:14px;color:var(--muted);transition:transform .2s;">${(S.cmpExpanded||{})[m.id]!==false?'▲':'▼'}</div>
+            </div>
+            <div id="cmp-preds-${m.id}" style="display:${(S.cmpExpanded||{})[m.id]!==false?'block':'none'};">
             ${players.length === 0 ? '<div style="font-size:12px;color:var(--muted);">Sin jugadores</div>' :
               players.map(name => {
                 const pred = ((S.players[name]||{}).predictions||{})[m.id];
@@ -1088,7 +1092,7 @@ function buildComparar() {
                 let badge = '';
                 let rowBg = '';
                 if(pts === 3){ badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">⭐ +3</span>`; rowBg='background:#f0fdf4;'; }
-                else if(pts === 2){ badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✓ +1</span>`; rowBg='background:#fefce8;'; }
+                else if(pts === 1){ badge=`<span style="background:#fef9c3;color:#ca8a04;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✓ +1</span>`; rowBg='background:#fefce8;'; }
                 else if(pts === 0){ badge=`<span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">✗ 0</span>`; rowBg='background:#fff5f5;'; }
                 else { badge=`<span style="background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">— sin pronóstico</span>`; }
                 let av=(S.players[name]||{}).avatar||null;
@@ -1101,6 +1105,7 @@ function buildComparar() {
                 </div>`;
               }).join('')
             }
+            </div>
           </div>
         </div>
       </div>`;
@@ -1110,6 +1115,17 @@ function buildComparar() {
 
 window.setCmpFilter=function(g){ S.compararFilter=g; renderTab(); };
 window.setCmpOrder=function(o){ S.compararOrder=o; renderTab(); };
+
+window.toggleCmpPreds=function(matchId){
+  if(!S.cmpExpanded) S.cmpExpanded={};
+  // Default is expanded (true), toggle to collapsed
+  const current = S.cmpExpanded[matchId] !== false;
+  S.cmpExpanded[matchId] = !current;
+  const el = document.getElementById('cmp-preds-'+matchId);
+  const arrow = document.getElementById('cmp-arrow-'+matchId);
+  if(el) el.style.display = !current ? 'block' : 'none';
+  if(arrow) arrow.textContent = !current ? '▲' : '▼';
+};
 
 window.toggleVerified=async function(name){
   if(!S.players[name]) return;
