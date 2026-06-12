@@ -1084,9 +1084,9 @@ function buildComparar() {
           <div style="border-top:1px solid var(--border);padding-top:10px;">
             <div onclick="toggleCmpPreds(${m.id})" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:6px;">
               <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Pronósticos (${players.length})</div>
-              <div id="cmp-arrow-${m.id}" style="font-size:14px;color:var(--muted);transition:transform .2s;">${(S.cmpExpanded||{})[m.id]!==false?'▲':'▼'}</div>
+              <div id="cmp-arrow-${m.id}" style="font-size:14px;color:var(--muted);transition:transform .2s;">${(S.cmpExpanded||{})[m.id]===true?'▲':'▼'}</div>
             </div>
-            <div id="cmp-preds-${m.id}" style="display:${(S.cmpExpanded||{})[m.id]!==false?'block':'none'};">
+            <div id="cmp-preds-${m.id}" style="display:${(S.cmpExpanded||{})[m.id]===true?'block':'none'};">
             ${players.length === 0 ? '<div style="font-size:12px;color:var(--muted);">Sin jugadores</div>' :
               players.map(name => {
                 const pred = ((S.players[name]||{}).predictions||{})[m.id];
@@ -1120,8 +1120,7 @@ window.setCmpOrder=function(o){ S.compararOrder=o; renderTab(); };
 
 window.toggleCmpPreds=function(matchId){
   if(!S.cmpExpanded) S.cmpExpanded={};
-  // Default is expanded (true), toggle to collapsed
-  const current = S.cmpExpanded[matchId] !== false;
+  const current = S.cmpExpanded[matchId] === true;
   S.cmpExpanded[matchId] = !current;
   const el = document.getElementById('cmp-preds-'+matchId);
   const arrow = document.getElementById('cmp-arrow-'+matchId);
