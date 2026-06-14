@@ -1261,11 +1261,16 @@ function buildRules() {
     S.screen='main';
   }
   else { S.screen='welcome'; }
-  // Start at first unpredicted match
+  // Ir al próximo partido por jugarse
   if(S.screen==='main') {
-    const preds=myPreds();
-    const idx=MATCHES.findIndex(m=>!(preds[m.id]&&preds[m.id].l!==''&&preds[m.id].v!==''));
-    S.matchIndex=idx>=0?idx:0;
+    const now = new Date();
+    const nextIdx = MATCHES.findIndex(m=>{
+      const dt = MATCH_DATES[m.id];
+      if(!dt) return false;
+      const kickoff = new Date(dt+'-03:00');
+      return kickoff > now;
+    });
+    S.matchIndex = nextIdx >= 0 ? nextIdx : MATCHES.length - 1;
   }
   render();
 })();
