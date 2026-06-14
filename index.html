@@ -279,7 +279,7 @@ input[type=number] { -moz-appearance: textfield; }
 // ── DATA ──
 const TEAMS = {
   'Argentina':'🇦🇷','Alemania':'🇩🇪','Francia':'🇫🇷²','Brasil':'🇧🇷',
-  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'🏴‍☠️','Países Bajos':'🇳🇱',
+  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'���‍☠️','Países Bajos':'🇳🇱',
   'Uruguay':'🇺🇾','Colombia':'🇨🇴','México':'🇲🇽','Estados Unidos':'🇺🇸',
   'Canadá':'🇨🇦','Ecuador':'🇪🇨','Paraguay':'🇵🇾','Marruecos':'🇲🇦',
   'Senegal':'🇸🇳','Ghana':'🇬🇭','Costa de Marfil':'🇨🇮','Sudáfrica':'🇿🇦',
@@ -325,11 +325,11 @@ const MATCHES = [
   {id:28,grupo:'A',fecha:'Jue 18 Jun',hora:'22:00',local:'México',visita:'Corea del Sur',sede:'Guadalajara'},
   {id:29,grupo:'D',fecha:'Vie 19 Jun',hora:'16:00',local:'Estados Unidos',visita:'Australia',sede:'Seattle'},
   {id:30,grupo:'C',fecha:'Vie 19 Jun',hora:'19:00',local:'Escocia',visita:'Marruecos',sede:'Boston'},
-  {id:31,grupo:'C',fecha:'Vie 19 Jun',hora:'21:30',local:'Brasil',visita:'Haití',sede:'Philadelphia'},
-  {id:32,grupo:'D',fecha:'Sáb 20 Jun',hora:'00:00',local:'Turquía',visita:'Paraguay',sede:'San Francisco'},
+  {id:31,grupo:'C',fecha:'Vie 19 Jun',hora:'22:00',local:'Brasil',visita:'Haití',sede:'Philadelphia'},
+  {id:32,grupo:'D',fecha:'Sáb 20 Jun',hora:'01:00',local:'Turquía',visita:'Paraguay',sede:'San Francisco'},
   {id:33,grupo:'F',fecha:'Sáb 20 Jun',hora:'14:00',local:'Países Bajos',visita:'Suecia',sede:'Houston'},
   {id:34,grupo:'E',fecha:'Sáb 20 Jun',hora:'17:00',local:'Alemania',visita:'Costa de Marfil',sede:'Toronto'},
-  {id:35,grupo:'E',fecha:'Sáb 20 Jun',hora:'23:00',local:'Ecuador',visita:'Curazao',sede:'Kansas City'},
+  {id:35,grupo:'E',fecha:'Sáb 20 Jun',hora:'21:00',local:'Ecuador',visita:'Curazao',sede:'Kansas City'},
   {id:36,grupo:'F',fecha:'Dom 21 Jun',hora:'01:00',local:'Túnez',visita:'Japón',sede:'Monterrey'},
   {id:37,grupo:'H',fecha:'Dom 21 Jun',hora:'13:00',local:'España',visita:'Arabia Saudita',sede:'Atlanta'},
   {id:38,grupo:'G',fecha:'Dom 21 Jun',hora:'16:00',local:'Bélgica',visita:'Irán',sede:'Los Ángeles'},
@@ -344,29 +344,29 @@ const MATCHES = [
   {id:47,grupo:'L',fecha:'Mar 23 Jun',hora:'20:00',local:'Panamá',visita:'Croacia',sede:'Toronto'},
   {id:48,grupo:'K',fecha:'Mar 23 Jun',hora:'23:00',local:'Colombia',visita:'RD de Congo',sede:'Guadalajara'},
   {id:49,grupo:'B',fecha:'Mié 24 Jun',hora:'16:00',local:'Suiza',visita:'Canadá',sede:'Vancouver'},
-  {id:50,grupo:'B',fecha:'Mié 24 Jun',hora:'16:00',local:'Bosnia y Herzegovina',visita:'Qatar',sede:'Houston'},
-  {id:51,grupo:'A',fecha:'Mié 24 Jun',hora:'20:00',local:'México',visita:'República Checa',sede:'Ciudad de México'},
-  {id:52,grupo:'A',fecha:'Mié 24 Jun',hora:'20:00',local:'Sudáfrica',visita:'Corea del Sur',sede:'Seattle'},
-  {id:53,grupo:'D',fecha:'Jue 25 Jun',hora:'16:00',local:'Australia',visita:'Paraguay',sede:'San Francisco'},
-  {id:54,grupo:'D',fecha:'Jue 25 Jun',hora:'16:00',local:'Turquía',visita:'Estados Unidos',sede:'Kansas City'},
-  {id:55,grupo:'C',fecha:'Jue 25 Jun',hora:'20:00',local:'Marruecos',visita:'Haití',sede:'Dallas'},
-  {id:56,grupo:'C',fecha:'Jue 25 Jun',hora:'20:00',local:'Escocia',visita:'Brasil',sede:'Philadelphia'},
-  {id:57,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Suecia',visita:'Japón',sede:'Houston'},
-  {id:58,grupo:'F',fecha:'Vie 26 Jun',hora:'16:00',local:'Países Bajos',visita:'Túnez',sede:'Boston'},
-  {id:59,grupo:'E',fecha:'Vie 26 Jun',hora:'20:00',local:'Ecuador',visita:'Alemania',sede:'Los Ángeles'},
-  {id:60,grupo:'E',fecha:'Vie 26 Jun',hora:'20:00',local:'Curazao',visita:'Costa de Marfil',sede:'Monterrey'},
-  {id:61,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Nueva Zelanda',visita:'Bélgica',sede:'Seattle'},
-  {id:62,grupo:'G',fecha:'Sáb 27 Jun',hora:'16:00',local:'Irán',visita:'Egipto',sede:'Toronto'},
-  {id:63,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'Cabo Verde',visita:'Arabia Saudita',sede:'Houston'},
-  {id:64,grupo:'H',fecha:'Sáb 27 Jun',hora:'20:00',local:'Uruguay',visita:'España',sede:'Guadalajara'},
-  {id:65,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Francia',visita:'Noruega',sede:'Atlanta'},
-  {id:66,grupo:'I',fecha:'Dom 28 Jun',hora:'16:00',local:'Senegal',visita:'Irak',sede:'Nueva Jersey'},
-  {id:67,grupo:'J',fecha:'Dom 28 Jun',hora:'20:00',local:'Argelia',visita:'Austria',sede:'Kansas City'},
-  {id:68,grupo:'J',fecha:'Dom 28 Jun',hora:'20:00',local:'Jordania',visita:'Argentina',sede:'Vancouver'},
-  {id:69,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'Portugal',visita:'Colombia',sede:'Philadelphia'},
-  {id:70,grupo:'K',fecha:'Lun 29 Jun',hora:'16:00',local:'RD de Congo',visita:'Uzbekistán',sede:'Atlanta'},
-  {id:71,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Inglaterra',visita:'Panamá',sede:'Los Ángeles'},
-  {id:72,grupo:'L',fecha:'Lun 29 Jun',hora:'20:00',local:'Croacia',visita:'Ghana',sede:'San Francisco'},
+  {id:50,grupo:'B',fecha:'Mié 24 Jun',hora:'16:00',local:'Bosnia y Herzegovina',visita:'Qatar',sede:'Seattle'},
+  {id:51,grupo:'A',fecha:'Mié 24 Jun',hora:'22:00',local:'México',visita:'República Checa',sede:'Ciudad de México'},
+  {id:52,grupo:'A',fecha:'Mié 24 Jun',hora:'22:00',local:'Sudáfrica',visita:'Corea del Sur',sede:'Monterrey'},
+  {id:53,grupo:'D',fecha:'Jue 25 Jun',hora:'23:00',local:'Australia',visita:'Paraguay',sede:'San Francisco'},
+  {id:54,grupo:'D',fecha:'Jue 25 Jun',hora:'23:00',local:'Turquía',visita:'Estados Unidos',sede:'Los Ángeles'},
+  {id:55,grupo:'C',fecha:'Mié 24 Jun',hora:'19:00',local:'Marruecos',visita:'Haití',sede:'Atlanta'},
+  {id:56,grupo:'C',fecha:'Mié 24 Jun',hora:'19:00',local:'Escocia',visita:'Brasil',sede:'Miami'},
+  {id:57,grupo:'F',fecha:'Jue 25 Jun',hora:'20:00',local:'Suecia',visita:'Japón',sede:'Dallas'},
+  {id:58,grupo:'F',fecha:'Jue 25 Jun',hora:'20:00',local:'Países Bajos',visita:'Túnez',sede:'Kansas City'},
+  {id:59,grupo:'E',fecha:'Jue 25 Jun',hora:'17:00',local:'Ecuador',visita:'Alemania',sede:'Nueva Jersey'},
+  {id:60,grupo:'E',fecha:'Jue 25 Jun',hora:'17:00',local:'Curazao',visita:'Costa de Marfil',sede:'Philadelphia'},
+  {id:61,grupo:'G',fecha:'Sáb 27 Jun',hora:'00:00',local:'Nueva Zelanda',visita:'Bélgica',sede:'Vancouver'},
+  {id:62,grupo:'G',fecha:'Sáb 27 Jun',hora:'00:00',local:'Irán',visita:'Egipto',sede:'Seattle'},
+  {id:63,grupo:'H',fecha:'Vie 26 Jun',hora:'21:00',local:'Cabo Verde',visita:'Arabia Saudita',sede:'Houston'},
+  {id:64,grupo:'H',fecha:'Vie 26 Jun',hora:'21:00',local:'Uruguay',visita:'España',sede:'Guadalajara'},
+  {id:65,grupo:'I',fecha:'Vie 26 Jun',hora:'16:00',local:'Francia',visita:'Noruega',sede:'Boston'},
+  {id:66,grupo:'I',fecha:'Vie 26 Jun',hora:'16:00',local:'Senegal',visita:'Irak',sede:'Toronto'},
+  {id:67,grupo:'J',fecha:'Sáb 27 Jun',hora:'23:00',local:'Argelia',visita:'Austria',sede:'Kansas City'},
+  {id:68,grupo:'J',fecha:'Sáb 27 Jun',hora:'23:00',local:'Jordania',visita:'Argentina',sede:'Dallas'},
+  {id:69,grupo:'K',fecha:'Sáb 27 Jun',hora:'20:30',local:'Portugal',visita:'Colombia',sede:'Miami'},
+  {id:70,grupo:'K',fecha:'Sáb 27 Jun',hora:'20:30',local:'RD de Congo',visita:'Uzbekistán',sede:'Atlanta'},
+  {id:71,grupo:'L',fecha:'Sáb 27 Jun',hora:'18:00',local:'Inglaterra',visita:'Panamá',sede:'Nueva Jersey'},
+  {id:72,grupo:'L',fecha:'Sáb 27 Jun',hora:'18:00',local:'Croacia',visita:'Ghana',sede:'Philadelphia'},
 ];
 
 const GROUPS = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -380,25 +380,44 @@ const MATCH_DATES = {
   17:'2026-06-16T16:00',18:'2026-06-16T19:00',19:'2026-06-16T22:00',20:'2026-06-17T01:00',
   21:'2026-06-17T14:00',22:'2026-06-17T17:00',23:'2026-06-17T20:00',24:'2026-06-17T23:00',
   25:'2026-06-18T13:00',26:'2026-06-18T16:00',27:'2026-06-18T19:00',28:'2026-06-18T22:00',
-  29:'2026-06-19T16:00',30:'2026-06-19T19:00',31:'2026-06-19T21:30',32:'2026-06-20T00:00',
-  33:'2026-06-20T14:00',34:'2026-06-20T17:00',35:'2026-06-20T23:00',36:'2026-06-21T01:00',
+  29:'2026-06-19T16:00',30:'2026-06-19T19:00',31:'2026-06-19T22:00',32:'2026-06-20T01:00',
+  33:'2026-06-20T14:00',34:'2026-06-20T17:00',35:'2026-06-20T21:00',36:'2026-06-21T01:00',
   37:'2026-06-21T13:00',38:'2026-06-21T16:00',39:'2026-06-21T19:00',40:'2026-06-21T22:00',
   41:'2026-06-22T14:00',42:'2026-06-22T18:00',43:'2026-06-22T21:00',44:'2026-06-23T00:00',
   45:'2026-06-23T14:00',46:'2026-06-23T17:00',47:'2026-06-23T20:00',48:'2026-06-23T23:00',
-  49:'2026-06-24T16:00',50:'2026-06-24T16:00',51:'2026-06-24T20:00',52:'2026-06-24T20:00',
-  53:'2026-06-25T16:00',54:'2026-06-25T16:00',55:'2026-06-25T20:00',56:'2026-06-25T20:00',
-  57:'2026-06-26T16:00',58:'2026-06-26T16:00',59:'2026-06-26T20:00',60:'2026-06-26T20:00',
-  61:'2026-06-27T16:00',62:'2026-06-27T16:00',63:'2026-06-27T20:00',64:'2026-06-27T20:00',
-  65:'2026-06-28T16:00',66:'2026-06-28T16:00',67:'2026-06-28T20:00',68:'2026-06-28T20:00',
-  69:'2026-06-29T16:00',70:'2026-06-29T16:00',71:'2026-06-29T20:00',72:'2026-06-29T20:00',
+  49:'2026-06-24T16:00',50:'2026-06-24T16:00',51:'2026-06-24T22:00',52:'2026-06-24T22:00',
+  53:'2026-06-25T23:00',54:'2026-06-25T23:00',55:'2026-06-24T19:00',56:'2026-06-24T19:00',
+  57:'2026-06-25T20:00',58:'2026-06-25T20:00',59:'2026-06-25T17:00',60:'2026-06-25T17:00',
+  61:'2026-06-27T00:00',62:'2026-06-27T00:00',63:'2026-06-26T21:00',64:'2026-06-26T21:00',
+  65:'2026-06-26T16:00',66:'2026-06-26T16:00',67:'2026-06-27T23:00',68:'2026-06-27T23:00',
+  69:'2026-06-27T20:30',70:'2026-06-27T20:30',71:'2026-06-27T18:00',72:'2026-06-27T18:00',
 };
+// ── SINCRONIZACIÓN DE HORA (no depende del reloj del celular) ──
+let serverTimeOffset = 0; // diferencia en ms entre la hora real y el reloj local
+async function syncTime() {
+  try {
+    const res = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { cache: 'no-store' });
+    const dateHeader = res.headers.get('date'); // hora del servidor (header HTTP)
+    if (dateHeader) {
+      const serverNow = new Date(dateHeader).getTime();
+      serverTimeOffset = serverNow - Date.now();
+    }
+  } catch(e) {
+    serverTimeOffset = 0; // si falla, se usa el reloj local como respaldo
+  }
+}
+// Hora real corregida, sin importar la zona horaria ni el reloj del dispositivo
+function nowReal() {
+  return new Date(Date.now() + serverTimeOffset);
+}
+
 function isMatchLocked(matchId) {
   const dt = MATCH_DATES[matchId];
   if(!dt) return false;
   // Los horarios son ARG (UTC-3)
   const kickoff = new Date(dt + '-03:00');
   const cutoff = new Date(kickoff.getTime() - 60*60*1000); // 1 hora antes
-  return new Date() >= cutoff;
+  return nowReal() >= cutoff; // hora real del servidor, no la del celular
 }
 
 
@@ -941,6 +960,7 @@ window.saveCurrent=async function(matchId){
 };
 
 window.saveAndNext=async function(matchId){
+  if(isMatchLocked(matchId)){toast('🔒 Este partido ya está cerrado');renderTab();return;}
   const lIn=document.getElementById('inL'),vIn=document.getElementById('inV');
   const lv=lIn?lIn.value:'', vv=vIn?vIn.value:'';
   if(lv===''||vv===''){toast('⚠ Completá los dos marcadores');return;}
@@ -1255,6 +1275,7 @@ function buildRules() {
 // ── BOOT ──
 (async function(){
   render();
+  await syncTime();
   await loadAll();
   if(S.user&&S.players[S.user]) {
     S.isAdmin = S.players[S.user].isAdmin === true;
@@ -1263,7 +1284,7 @@ function buildRules() {
   else { S.screen='welcome'; }
   // Ir al próximo partido por jugarse
   if(S.screen==='main') {
-    const now = new Date();
+    const now = nowReal();
     const nextIdx = MATCHES.findIndex(m=>{
       const dt = MATCH_DATES[m.id];
       if(!dt) return false;
