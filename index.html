@@ -903,8 +903,19 @@ window.selectNewEmoji=async function(e){
 };
 
 window.setTab=function(t){
-  S.tab=t; S.matchIndex=0;
-  const tabs=['fixture','ranking','comparar','results','rules'];
+  S.tab=t;
+  // Si va a fixture, saltear al próximo partido por jugar
+  if(t==='fixture'){
+    S.groupFilter='Todos';
+    const now = new Date();
+    const nextIdx = MATCHES.findIndex(m=>{
+      const dt = MATCH_DATES[m.id];
+      if(!dt) return false;
+      const kickoff = new Date(dt+'-03:00');
+      return kickoff > now;
+    });
+    S.matchIndex = nextIdx >= 0 ? nextIdx : MATCHES.length - 1;
+  }
   document.querySelectorAll('.tab').forEach((el)=>{
     const onclick=el.getAttribute('onclick')||'';
     const match=onclick.match(/setTab\('(\w+)'\)/);
