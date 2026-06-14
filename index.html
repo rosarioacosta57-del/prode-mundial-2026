@@ -219,6 +219,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .score-mini-in:focus { border-color: var(--blue); background: var(--blue-light); }
 .score-mini-in.done { border-color: var(--green); background: var(--green-light); color: var(--green); }
 .score-mini-sep { font-family: var(--font-head); font-size: 16px; color: var(--muted); }
+.res-lock-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.res-lock-status { font-size: 11px; font-weight: 700; color: var(--muted); }
+.res-lock-status.auto { color: var(--gold); }
+.res-lock-status.manual { color: var(--red); }
+.lock-btn { border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all .15s; }
+.lock-btn:hover { border-color: var(--muted); }
+.lock-btn.locked { background: var(--red-light); border-color: var(--red); color: var(--red); }
 
 /* RULES */
 .rules-wrap { padding: 16px; }
@@ -279,7 +286,7 @@ input[type=number] { -moz-appearance: textfield; }
 // ── DATA ──
 const TEAMS = {
   'Argentina':'🇦🇷','Alemania':'🇩🇪','Francia':'🇫🇷²','Brasil':'🇧🇷',
-  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'���‍☠️','Países Bajos':'🇳🇱',
+  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'�����‍☠️','Países Bajos':'🇳🇱',
   'Uruguay':'🇺🇾','Colombia':'🇨🇴','México':'🇲🇽','Estados Unidos':'🇺🇸',
   'Canadá':'🇨🇦','Ecuador':'🇪🇨','Paraguay':'🇵🇾','Marruecos':'🇲🇦',
   'Senegal':'🇸🇳','Ghana':'🇬🇭','Costa de Marfil':'🇨🇮','Sudáfrica':'🇿🇦',
@@ -393,25 +400,44 @@ const MATCH_DATES = {
   69:'2026-06-27T20:30',70:'2026-06-27T20:30',71:'2026-06-27T18:00',72:'2026-06-27T18:00',
 };
 // ── SINCRONIZACIÓN DE HORA (no depende del reloj del celular) ──
-let serverTimeOffset = 0; // diferencia en ms entre la hora real y el reloj local
+let serverTimeOffset = 0;   // diferencia en ms entre la hora real y el reloj local
+let timeSynced = false;     // true solo si pudimos obtener la hora real
+
 async function syncTime() {
+  // 1) Cloudflare: leemos el campo "ts=" del CUERPO (accesible por CORS)
   try {
     const res = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { cache: 'no-store' });
-    const dateHeader = res.headers.get('date'); // hora del servidor (header HTTP)
-    if (dateHeader) {
-      const serverNow = new Date(dateHeader).getTime();
+    const txt = await res.text();
+    const m = txt.match(/ts=([\d.]+)/);
+    if (m) {
+      const serverNow = parseFloat(m[1]) * 1000; // ts viene en segundos
       serverTimeOffset = serverNow - Date.now();
+      timeSynced = true;
+      return;
     }
-  } catch(e) {
-    serverTimeOffset = 0; // si falla, se usa el reloj local como respaldo
-  }
+  } catch(e) { /* probamos el siguiente */ }
+
+  // 2) Respaldo: API pública de hora mundial
+  try {
+    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
+    const data = await res.json();
+    if (data && data.unixtime) {
+      serverTimeOffset = (data.unixtime * 1000) - Date.now();
+      timeSynced = true;
+      return;
+    }
+  } catch(e) { /* sin conexión: queda timeSynced=false */ }
 }
+
 // Hora real corregida, sin importar la zona horaria ni el reloj del dispositivo
 function nowReal() {
   return new Date(Date.now() + serverTimeOffset);
 }
 
 function isMatchLocked(matchId) {
+  // 1) Bloqueo manual del admin: tiene prioridad
+  if (S.locks && S.locks[matchId]) return true;
+  // 2) Bloqueo automático 1h antes del partido
   const dt = MATCH_DATES[matchId];
   if(!dt) return false;
   // Los horarios son ARG (UTC-3)
@@ -419,6 +445,21 @@ function isMatchLocked(matchId) {
   const cutoff = new Date(kickoff.getTime() - 60*60*1000); // 1 hora antes
   return nowReal() >= cutoff; // hora real del servidor, no la del celular
 }
+
+// Alterna el bloqueo manual de un partido (solo admin)
+window.toggleLock = async function(matchId) {
+  if (!S.isAdmin) return;
+  if (!S.locks) S.locks = {};
+  if (S.locks[matchId]) {
+    delete S.locks[matchId];
+    toast('🔓 Pronósticos reabiertos');
+  } else {
+    S.locks[matchId] = true;
+    toast('🔒 Pronósticos bloqueados manualmente');
+  }
+  await saveLocks();
+  renderTab();
+};
 
 
 // Puntuación: exacto = 3 pts, resultado = 2 pts
@@ -438,6 +479,7 @@ let S = {
   user: null,
   players: {},
   results: {},
+  locks: {}, // bloqueos manuales del admin: { matchId: true }
   tab: 'fixture',
   matchIndex: 0,
   groupFilter: 'Todos',
@@ -465,13 +507,15 @@ const db = firebase.firestore();
 // ── STORAGE ──
 async function loadAll() {
   try {
-    const [pr, rr] = await Promise.all([
+    const [pr, rr, lr] = await Promise.all([
       db.collection('prode26').doc('players').get(),
       db.collection('prode26').doc('results').get(),
+      db.collection('prode26').doc('locks').get(),
     ]);
     if (pr.exists) S.players = pr.data().data || {};
     if (rr.exists) S.results = rr.data().data || {};
-  } catch(e) { S.players={}; S.results={}; }
+    if (lr.exists) S.locks = lr.data().data || {};
+  } catch(e) { S.players={}; S.results={}; S.locks={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
 
@@ -486,6 +530,9 @@ async function loadAll() {
   db.collection('prode26').doc('results').onSnapshot(snap => {
     if(snap.exists) { S.results = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
+  db.collection('prode26').doc('locks').onSnapshot(snap => {
+    if(snap.exists) { S.locks = snap.data().data || {}; if(S.screen==='main') renderTab(); }
+  });
 }
 
 async function savePlayers() {
@@ -493,6 +540,9 @@ async function savePlayers() {
 }
 async function saveResults() {
   try { await db.collection('prode26').doc('results').set({ data: S.results }); } catch(e){ console.error(e); }
+}
+async function saveLocks() {
+  try { await db.collection('prode26').doc('locks').set({ data: S.locks }); } catch(e){ console.error(e); }
 }
 
 // ── UTILS ──
@@ -1227,6 +1277,13 @@ function buildResults() {
     ${filtered.map(m=>{
       const r=S.results[m.id]||{};
       const done=r.l!==undefined&&r.l!==''&&r.v!==undefined&&r.v!=='';
+      const manualLock = !!(S.locks && S.locks[m.id]);
+      const autoLock = isMatchLocked(m.id) && !manualLock;
+      const lockStatus = manualLock
+        ? `<span class="res-lock-status manual">🔒 Bloqueado manualmente</span>`
+        : (autoLock
+            ? `<span class="res-lock-status auto">🔒 Cerrado por horario</span>`
+            : `<span class="res-lock-status">🔓 Pronósticos abiertos</span>`);
       return `<div class="res-card">
         <div class="res-header">
           <span class="res-group">Grupo ${m.grupo}</span>
@@ -1240,6 +1297,10 @@ function buildResults() {
             <input class="score-mini-in ${done?'done':''}" type="number" min="0" max="20" value="${done?r.v:''}" placeholder="-" onchange="setResult(${m.id},'v',this.value)">
           </div>
           <div class="res-team away"><span class="flag">${TEAMS[m.visita]||'🏳'}</span><span class="tname">${m.visita}</span></div>
+        </div>
+        <div class="res-lock-row">
+          ${lockStatus}
+          <button class="lock-btn ${manualLock?'locked':''}" onclick="toggleLock(${m.id})">${manualLock?'🔓 Reabrir':'🔒 Bloquear'}</button>
         </div>
       </div>`;
     }).join('')}
