@@ -286,7 +286,7 @@ input[type=number] { -moz-appearance: textfield; }
 // ── DATA ──
 const TEAMS = {
   'Argentina':'🇦🇷','Alemania':'🇩🇪','Francia':'🇫🇷²','Brasil':'🇧🇷',
-  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'�����‍☠️','Países Bajos':'🇳🇱',
+  'España':'🇪🇸','Portugal':'🇵🇹','Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Países Bajos':'🇳🇱',
   'Uruguay':'🇺🇾','Colombia':'🇨🇴','México':'🇲🇽','Estados Unidos':'🇺🇸',
   'Canadá':'🇨🇦','Ecuador':'🇪🇨','Paraguay':'🇵🇾','Marruecos':'🇲🇦',
   'Senegal':'🇸🇳','Ghana':'🇬🇭','Costa de Marfil':'🇨🇮','Sudáfrica':'🇿🇦',
@@ -437,7 +437,11 @@ function nowReal() {
 function isMatchLocked(matchId) {
   // 1) Bloqueo manual del admin: tiene prioridad
   if (S.locks && S.locks[matchId]) return true;
-  // 2) Bloqueo automático 1h antes del partido
+  // 2) Si ya hay un resultado final cargado, el pronóstico queda cerrado SIEMPRE
+  //    (no depende del reloj del celular ni de la sincronización de hora)
+  const r = S.results && S.results[matchId];
+  if (r && r.l!=='' && r.l!==undefined && r.l!==null && r.v!=='' && r.v!==undefined && r.v!==null) return true;
+  // 3) Bloqueo automático 1h antes del partido
   const dt = MATCH_DATES[matchId];
   if(!dt) return false;
   // Los horarios son ARG (UTC-3)
