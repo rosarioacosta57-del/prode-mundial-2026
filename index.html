@@ -399,6 +399,21 @@ const MATCH_DATES = {
   65:'2026-06-26T16:00',66:'2026-06-26T16:00',67:'2026-06-27T23:00',68:'2026-06-27T23:00',
   69:'2026-06-27T20:30',70:'2026-06-27T20:30',71:'2026-06-27T18:00',72:'2026-06-27T18:00',
 };
+
+// ── ORDEN CRONOLÓGICO ──
+// Las fechas/horas escritas en MATCHES no están en orden cronológico,
+// así que ordenamos la lista por la fecha/hora real (MATCH_DATES), por día y hora.
+// Esto afecta a todas las vistas (pronósticos y resultados) de forma uniforme.
+function matchSortKey(m) {
+  const dt = MATCH_DATES[m.id];
+  if (dt) return new Date(dt + '-03:00').getTime(); // horarios en ARG (UTC-3)
+  return Number.MAX_SAFE_INTEGER; // sin fecha conocida: al final
+}
+MATCHES.sort((a, b) => {
+  const diff = matchSortKey(a) - matchSortKey(b);
+  return diff !== 0 ? diff : a.id - b.id;
+});
+
 // ── SINCRONIZACIÓN DE HORA (no depende del reloj del celular) ──
 let serverTimeOffset = 0;   // diferencia en ms entre la hora real y el reloj local
 let timeSynced = false;     // true solo si pudimos obtener la hora real
