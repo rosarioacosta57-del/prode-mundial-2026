@@ -499,6 +499,8 @@ let S = {
   players: {},
   results: {},
   locks: {}, // bloqueos manuales del admin: { matchId: true }
+  resultAudit: {}, // auditoría de carga de resultados: { matchId: {updatedAt, updatedBy, l, v} }
+  predictionAudit: {}, // auditoría de pronósticos: { jugador: { matchId: {savedAt, savedBy, l, v} } }
   tab: 'fixture',
   matchIndex: 0,
   groupFilter: 'Todos',
@@ -526,15 +528,19 @@ const db = firebase.firestore();
 // ── STORAGE ──
 async function loadAll() {
   try {
-    const [pr, rr, lr] = await Promise.all([
+    const [pr, rr, lr, ar, pa] = await Promise.all([
       db.collection('prode26').doc('players').get(),
       db.collection('prode26').doc('results').get(),
       db.collection('prode26').doc('locks').get(),
+      db.collection('prode26').doc('resultAudit').get(),
+      db.collection('prode26').doc('predictionAudit').get(),
     ]);
     if (pr.exists) S.players = pr.data().data || {};
     if (rr.exists) S.results = rr.data().data || {};
     if (lr.exists) S.locks = lr.data().data || {};
-  } catch(e) { S.players={}; S.results={}; S.locks={}; }
+    if (ar.exists) S.resultAudit = ar.data().data || {};
+    if (pa.exists) S.predictionAudit = pa.data().data || {};
+  } catch(e) { S.players={}; S.results={}; S.locks={}; S.resultAudit={}; S.predictionAudit={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
 
@@ -552,6 +558,12 @@ async function loadAll() {
   db.collection('prode26').doc('locks').onSnapshot(snap => {
     if(snap.exists) { S.locks = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
+  db.collection('prode26').doc('resultAudit').onSnapshot(snap => {
+    if(snap.exists) { S.resultAudit = snap.data().data || {}; if(S.screen==='main' && S.tab==='results') renderTab(); }
+  });
+  db.collection('prode26').doc('predictionAudit').onSnapshot(snap => {
+    if(snap.exists) { S.predictionAudit = snap.data().data || {}; if(S.screen==='main' && S.tab==='auditoria') renderTab(); }
+  });
 }
 
 async function savePlayers() {
@@ -562,6 +574,12 @@ async function saveResults() {
 }
 async function saveLocks() {
   try { await db.collection('prode26').doc('locks').set({ data: S.locks }); } catch(e){ console.error(e); }
+}
+async function saveResultAudit() {
+  try { await db.collection('prode26').doc('resultAudit').set({ data: S.resultAudit }); } catch(e){ console.error(e); }
+}
+async function savePredictionAudit() {
+  try { await db.collection('prode26').doc('predictionAudit').set({ data: S.predictionAudit }); } catch(e){ console.error(e); }
 }
 
 // ── UTILS ──
@@ -688,6 +706,7 @@ function renderMain(app) {
     <div class="tab ${S.tab==='comparar'?'active':''}" onclick="setTab('comparar')">Comparar</div>
     ${S.isAdmin?`<div class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Resultados ⚙️</div>`:''}
     ${S.isAdmin?`<div class="tab ${S.tab==='pagos'?'active':''}" onclick="setTab('pagos')">Pagos 💳</div>`:''}
+    ${S.isAdmin?`<div class="tab ${S.tab==='auditoria'?'active':''}" onclick="setTab('auditoria')">Auditoría 🕒</div>`:''}
     <div class="tab ${S.tab==='rules'?'active':''}" onclick="setTab('rules')">Reglas</div>
   </div>
   <div id="tabContent"></div>`;
@@ -702,6 +721,7 @@ function renderTab() {
   else if(S.tab==='comparar') el.innerHTML=buildComparar();
   else if(S.tab==='results') el.innerHTML=buildResults();
   else if(S.tab==='pagos') el.innerHTML=buildPagos();
+  else if(S.tab==='auditoria') el.innerHTML=buildAuditoriaPronosticos();
   else el.innerHTML=buildRules();
   attachInputListeners();
 }
@@ -916,6 +936,23 @@ function autoSaveHint() {
   if(btn) btn.style.opacity='1';
 }
 
+
+function recordPredictionAudit(matchId, l, v) {
+  if(!S.predictionAudit) S.predictionAudit = {};
+  if(!S.predictionAudit[S.user]) S.predictionAudit[S.user] = {};
+  const previous = S.predictionAudit[S.user][matchId] || {};
+  const stamp = new Date(Date.now() + serverTimeOffset).toISOString();
+  S.predictionAudit[S.user][matchId] = {
+    matchId: matchId,
+    savedAt: previous.savedAt || stamp,
+    updatedAt: stamp,
+    savedBy: S.user,
+    l: +l,
+    v: +v,
+    editCount: (previous.editCount || 0) + 1
+  };
+}
+
 // ── ACTIONS ──
 window.doJoin=async function(){
   const inp=document.getElementById('nameIn');
@@ -1023,7 +1060,8 @@ window.saveCurrent=async function(matchId){
   if(!S.players[S.user])S.players[S.user]={predictions:{},joined:Date.now()};
   if(!S.players[S.user].predictions)S.players[S.user].predictions={};
   S.players[S.user].predictions[matchId]={l:+lv,v:+vv};
-  await savePlayers();
+  recordPredictionAudit(matchId, lv, vv);
+  await Promise.all([savePlayers(), savePredictionAudit()]);
   toast('✓ Pronóstico guardado');
   renderTab();
 };
@@ -1036,7 +1074,8 @@ window.saveAndNext=async function(matchId){
   if(!S.players[S.user])S.players[S.user]={predictions:{},joined:Date.now()};
   if(!S.players[S.user].predictions)S.players[S.user].predictions={};
   S.players[S.user].predictions[matchId]={l:+lv,v:+vv};
-  await savePlayers();
+  recordPredictionAudit(matchId, lv, vv);
+  await Promise.all([savePlayers(), savePredictionAudit()]);
   toast('✓ Guardado');
   const f=getFilteredMatches();
   if(S.matchIndex<f.length-1){S.matchIndex++;renderTab();}
@@ -1044,10 +1083,23 @@ window.saveAndNext=async function(matchId){
 };
 
 window.setResult=async function(matchId,side,value){
+  if(!S.isAdmin) return;
   if(!S.results[matchId])S.results[matchId]={l:'',v:''};
   S.results[matchId][side]=value===''?'':+value;
   const r=S.results[matchId];
-  if(r.l!==''&&r.v!==''){await saveResults();toast('✓ Resultado guardado');}
+  if(r.l!==''&&r.v!==''){
+    const stamp = new Date(Date.now() + serverTimeOffset).toISOString();
+    if(!S.resultAudit) S.resultAudit = {};
+    S.resultAudit[matchId] = {
+      matchId: matchId,
+      updatedAt: stamp,
+      updatedBy: S.user || 'admin',
+      l: +r.l,
+      v: +r.v
+    };
+    await Promise.all([saveResults(), saveResultAudit()]);
+    toast('✓ Resultado guardado con hora');
+  }
 };
 
 // ── RANKING ──
@@ -1282,13 +1334,158 @@ function buildPagos() {
   </div>`;
 }
 
+// ── EXPORTAR AUDITORÍA DE RESULTADOS (admin) ──
+function formatAuditDate(iso) {
+  if(!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  } catch(e) { return iso; }
+}
+function csvCell(v) {
+  const s = (v===undefined || v===null) ? '' : String(v);
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+window.downloadResultsExcel = function(onlyPending=false) {
+  if(!S.isAdmin) return;
+  const rows = [[
+    'ID','Grupo','Fecha partido','Hora partido','Local','Goles local','Goles visita','Visitante',
+    'Resultado cargado el','Resultado cargado por','Timestamp ISO','Estado'
+  ]];
+  MATCHES.forEach(m => {
+    const r = (S.results && S.results[m.id]) || {};
+    const a = (S.resultAudit && S.resultAudit[m.id]) || {};
+    const done = r.l!==undefined && r.l!=='' && r.v!==undefined && r.v!=='';
+    if(onlyPending && done) return;
+    rows.push([
+      m.id, m.grupo, m.fecha, m.hora + ' ARG', m.local,
+      done ? r.l : '', done ? r.v : '', m.visita,
+      a.updatedAt ? formatAuditDate(a.updatedAt) : '',
+      a.updatedBy || '',
+      a.updatedAt || '',
+      done ? (a.updatedAt ? 'Cargado con auditoría' : 'Cargado sin hora registrada') : 'Pendiente'
+    ]);
+  });
+  const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = onlyPending ? 'prode-resultados-pendientes.csv' : 'prode-auditoria-resultados.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('📥 Archivo para Excel descargado');
+};
+
+
+// ── AUDITORÍA DE PRONÓSTICOS (admin) ──
+function getPredictionAuditFor(player, matchId) {
+  return (S.predictionAudit && S.predictionAudit[player] && S.predictionAudit[player][matchId]) || null;
+}
+window.downloadPredictionExcel = function(onlyRemaining=false) {
+  if(!S.isAdmin) return;
+  const rows = [[
+    'Jugador','ID partido','Grupo','Fecha partido','Hora partido','Local','Pronóstico local','Pronóstico visita','Visitante',
+    'Primer guardado','Última modificación','Timestamp ISO','Cantidad de guardados','Estado'
+  ]];
+  const players = Object.keys(S.players || {}).sort((a,b)=>a.localeCompare(b,'es'));
+  const now = nowReal();
+  players.forEach(name => {
+    const preds = (S.players[name] && S.players[name].predictions) || {};
+    MATCHES.forEach(m => {
+      const dt = MATCH_DATES[m.id] ? new Date(MATCH_DATES[m.id] + '-03:00') : null;
+      if(onlyRemaining && dt && dt <= now) return;
+      const p = preds[m.id] || {};
+      const hasPred = p.l!==undefined && p.l!=='' && p.v!==undefined && p.v!=='';
+      const a = getPredictionAuditFor(name, m.id);
+      rows.push([
+        name, m.id, m.grupo, m.fecha, m.hora + ' ARG', m.local,
+        hasPred ? p.l : '', hasPred ? p.v : '', m.visita,
+        a && a.savedAt ? formatAuditDate(a.savedAt) : '',
+        a && a.updatedAt ? formatAuditDate(a.updatedAt) : '',
+        a && a.updatedAt ? a.updatedAt : '',
+        a && a.editCount ? a.editCount : '',
+        hasPred ? (a && a.updatedAt ? 'Con hora registrada' : 'Cargado antes de auditoría / sin hora') : 'Sin pronóstico'
+      ]);
+    });
+  });
+  const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = onlyRemaining ? 'prode-auditoria-pronosticos-partidos-restantes.csv' : 'prode-auditoria-pronosticos.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('📥 Auditoría de pronósticos descargada');
+};
+
+function buildAuditoriaPronosticos() {
+  if(!S.isAdmin) return `<div class="empty"><div class="empty-icon">🔒</div>Solo admin</div>`;
+  const players = Object.keys(S.players || {}).sort((a,b)=>a.localeCompare(b,'es'));
+  let totalPreds = 0, conHora = 0, sinHora = 0;
+  players.forEach(name => {
+    const preds = (S.players[name] && S.players[name].predictions) || {};
+    Object.keys(preds).forEach(mid => {
+      const p = preds[mid];
+      if(p && p.l!==undefined && p.l!=='' && p.v!==undefined && p.v!=='') {
+        totalPreds++;
+        if(getPredictionAuditFor(name, mid)?.updatedAt) conHora++;
+        else sinHora++;
+      }
+    });
+  });
+  const recent = [];
+  players.forEach(name => {
+    const audits = (S.predictionAudit && S.predictionAudit[name]) || {};
+    Object.values(audits).forEach(a => {
+      const m = MATCHES.find(x => x.id == a.matchId);
+      if(m) recent.push({name, a, m});
+    });
+  });
+  recent.sort((x,y)=>new Date(y.a.updatedAt||0)-new Date(x.a.updatedAt||0));
+  return `<div class="results-wrap">
+    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
+      <div style="font-weight:800;margin-bottom:8px;">🕒 Auditoría de pronósticos</div>
+      <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">Desde esta versión, cada vez que un jugador guarda o modifica un pronóstico se registra fecha, hora, jugador, partido y marcador. Los pronósticos cargados antes de esta actualización figuran como “sin hora registrada”.</div>
+      <button class="btn-sm" onclick="downloadPredictionExcel(false)" style="background:#2563eb;color:white;border-color:#2563eb;margin-right:6px;">Descargar Excel/CSV completo</button>
+      <button class="btn-sm" onclick="downloadPredictionExcel(true)">Solo partidos restantes</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-n">${totalPreds}</div><div class="stat-l">Pronósticos</div></div>
+      <div class="stat-box"><div class="stat-n">${conHora}</div><div class="stat-l">Con hora</div></div>
+      <div class="stat-box"><div class="stat-n">${sinHora}</div><div class="stat-l">Sin hora previa</div></div>
+    </div>
+    <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;margin-bottom:10px;">Últimos guardados</div>
+    ${recent.length===0?`<div class="empty"><div class="empty-icon">⏳</div>Todavía no hay pronósticos guardados con auditoría.</div>`:
+      recent.slice(0,80).map(({name,a,m})=>`<div class="res-card">
+        <div class="res-header"><span class="res-group">${name} · Grupo ${m.grupo}</span><span class="res-date">${formatAuditDate(a.updatedAt)}</span></div>
+        <div style="font-size:13px;font-weight:800;">${m.local} ${a.l} - ${a.v} ${m.visita}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Partido ${m.id} · ${m.fecha} ${m.hora} ARG · guardados: ${a.editCount||1}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
 // ── RESULTS (admin) ──
 function buildResults() {
   const filtered = S.groupFilter==='Todos'?MATCHES:MATCHES.filter(m=>m.grupo===S.groupFilter);
 
   return `<div class="results-wrap">
-    <div style="background:var(--gold-light);border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--gold);">
+    <div style="background:var(--gold-light);border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--gold);">
       ⚙ Modo admin — ingresá los marcadores reales para calcular puntos
+    </div>
+    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
+      <div style="font-weight:800;margin-bottom:8px;">📊 Auditoría de resultados</div>
+      <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">Desde esta versión, cada resultado final guarda fecha, hora y usuario admin que lo cargó. Los resultados cargados antes de esta actualización figuran como “sin hora registrada”.</div>
+      <button class="btn-sm" onclick="downloadResultsExcel(false)" style="background:#2563eb;color:white;border-color:#2563eb;margin-right:6px;">Descargar Excel/CSV</button>
+      <button class="btn-sm" onclick="downloadResultsExcel(true)">Solo pendientes</button>
     </div>
     <div class="filter-row">
       ${GROUPS.map(g=>`<button class="f-btn ${S.groupFilter===g?'active':''}" onclick="setGrp('${g}')">${g}</button>`).join('')}
@@ -1321,6 +1518,7 @@ function buildResults() {
           ${lockStatus}
           <button class="lock-btn ${manualLock?'locked':''}" onclick="toggleLock(${m.id})">${manualLock?'🔓 Reabrir':'🔒 Bloquear'}</button>
         </div>
+        ${done ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);font-weight:700;">🕒 Cargado: ${S.resultAudit && S.resultAudit[m.id] && S.resultAudit[m.id].updatedAt ? formatAuditDate(S.resultAudit[m.id].updatedAt) + ' · por ' + (S.resultAudit[m.id].updatedBy || 'admin') : 'sin hora registrada'}</div>` : ''}
       </div>`;
     }).join('')}
   </div>`;
