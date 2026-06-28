@@ -527,7 +527,8 @@ let S = {
   players: {},
   results: {},
   locks: {}, // bloqueos manuales del admin: { matchId: true }
-  settings: {}, // config global del admin (ej: imágenes de ganadores) { winnerImages: {1,2,3} }
+  settings: {},
+  winnerImages: {}, // imágenes de ganadores en documentos separados: {1,2,3}
   tab: 'fixture',
   matchIndex: 0,
   groupFilter: 'Todos',
@@ -555,17 +556,27 @@ const db = firebase.firestore();
 // ── STORAGE ──
 async function loadAll() {
   try {
-    const [pr, rr, lr, sr] = await Promise.all([
+    const [pr, rr, lr, sr, wi1, wi2, wi3] = await Promise.all([
       db.collection('prode26').doc('players').get(),
       db.collection('prode26').doc('results').get(),
       db.collection('prode26').doc('locks').get(),
       db.collection('prode26').doc('settings').get(),
+      db.collection('prode26_winnerImages').doc('1').get(),
+      db.collection('prode26_winnerImages').doc('2').get(),
+      db.collection('prode26_winnerImages').doc('3').get(),
     ]);
     if (pr.exists) S.players = pr.data().data || {};
     if (rr.exists) S.results = rr.data().data || {};
     if (lr.exists) S.locks = lr.data().data || {};
     if (sr.exists) S.settings = sr.data().data || {};
-  } catch(e) { S.players={}; S.results={}; S.locks={}; S.settings={}; }
+    S.winnerImages = {};
+    [wi1, wi2, wi3].forEach((docSnap, idx) => {
+      if(docSnap.exists) {
+        const d = docSnap.data() || {};
+        if(d.image) S.winnerImages[String(idx+1)] = d.image;
+      }
+    });
+  } catch(e) { S.players={}; S.results={}; S.locks={}; S.settings={}; S.winnerImages={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
 
@@ -586,6 +597,19 @@ async function loadAll() {
   db.collection('prode26').doc('settings').onSnapshot(snap => {
     if(snap.exists) { S.settings = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
+  ['1','2','3'].forEach(pos => {
+    db.collection('prode26_winnerImages').doc(pos).onSnapshot(snap => {
+      if(!S.winnerImages) S.winnerImages = {};
+      if(snap.exists) {
+        const d = snap.data() || {};
+        if(d.image) S.winnerImages[pos] = d.image;
+        else delete S.winnerImages[pos];
+      } else {
+        delete S.winnerImages[pos];
+      }
+      if(S.screen==='main') renderTab();
+    });
+  });
 }
 
 async function savePlayers() {
@@ -599,6 +623,14 @@ async function saveLocks() {
 }
 async function saveSettings() {
   try { await db.collection('prode26').doc('settings').set({ data: S.settings }); } catch(e){ console.error(e); }
+}
+async function saveWinnerImage(pos, imageData) {
+  const ref = db.collection('prode26_winnerImages').doc(String(pos));
+  if(imageData) {
+    await ref.set({ image: imageData, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: S.user || '' });
+  } else {
+    await ref.delete();
+  }
 }
 
 // ── UTILS ──
@@ -1163,7 +1195,7 @@ function buildRanking() {
     { label:'SEGUNDO PUESTO', medal:'🥈', prize:prize2, accent:'#cbd5e1', cls:'win-2' },
     { label:'TERCER PUESTO', medal:'🥉', prize:prize3, accent:'#fb923c', cls:'win-3' },
   ];
-  const imgs = (S.settings && S.settings.winnerImages) || {};
+  const imgs = S.winnerImages || {};
 
   const winnerCards = rows.slice(0,3).map((r,i)=>{
     const p = podium[i];
@@ -1362,7 +1394,7 @@ function buildPagos() {
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Subí una foto para cada puesto. Se mostrará a todos en la pestaña Ranking.</div>
     ${[1,2,3].map(pos=>{
       const labels={1:'🥇 Primer puesto',2:'🥈 Segundo puesto',3:'🥉 Tercer puesto'};
-      const img=((S.settings||{}).winnerImages||{})[pos];
+      const img=(S.winnerImages||{})[String(pos)];
       return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin-bottom:8px;background:var(--card);border:1px solid var(--border);">
         <div style="width:54px;height:54px;border-radius:10px;overflow:hidden;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${img?`<img src="${img}" style="width:100%;height:100%;object-fit:cover;">`:'🖼'}</div>
         <div style="flex:1;font-size:14px;font-weight:800;">${labels[pos]}</div>
@@ -1376,7 +1408,7 @@ function buildPagos() {
   </div>`;
 }
 
-function resizeWinnerImage(file, maxSize=700, quality=0.72) {
+function resizeWinnerImage(file, maxSize=520, quality=0.62) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
@@ -1408,16 +1440,15 @@ window.uploadWinnerImage=async function(pos,input){
   try {
     toast('⏳ Guardando foto...');
     const dataUrl = await resizeWinnerImage(file);
-    // Firestore tiene límite de tamaño por documento. Guardamos una versión comprimida.
-    if(dataUrl.length > 650000) {
+    // Se guarda en un documento separado para no romper el documento principal.
+    if(dataUrl.length > 900000) {
       alert('La imagen sigue siendo muy pesada. Probá con una foto más chica o recortada.');
       input.value='';
       return;
     }
-    if(!S.settings) S.settings={};
-    if(!S.settings.winnerImages) S.settings.winnerImages={};
-    S.settings.winnerImages[String(pos)] = dataUrl;
-    await saveSettings();
+    if(!S.winnerImages) S.winnerImages={};
+    S.winnerImages[String(pos)] = dataUrl;
+    await saveWinnerImage(pos, dataUrl);
     toast('✅ Foto guardada');
     renderTab();
   } catch(e) {
@@ -1428,8 +1459,12 @@ window.uploadWinnerImage=async function(pos,input){
   }
 };
 
-window.removeWinnerImage=function(pos){
-  if(S.settings&&S.settings.winnerImages){ delete S.settings.winnerImages[pos]; saveSettings(); renderTab(); }
+window.removeWinnerImage=async function(pos){
+  if(!S.winnerImages) S.winnerImages={};
+  delete S.winnerImages[String(pos)];
+  try { await saveWinnerImage(pos, null); toast('🗑️ Foto eliminada'); }
+  catch(e){ console.error(e); alert('No se pudo eliminar la foto.'); }
+  renderTab();
 };
 
 // ── RESULTS (admin) ──
