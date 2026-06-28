@@ -1376,19 +1376,56 @@ function buildPagos() {
   </div>`;
 }
 
-window.uploadWinnerImage=function(pos,input){
+function resizeWinnerImage(file, maxSize=700, quality=0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo cargar la imagen.'));
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const scale = Math.min(1, maxSize / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.uploadWinnerImage=async function(pos,input){
   const file=input.files&&input.files[0];
   if(!file) return;
-  if(file.size>1500000){ alert('La imagen es muy pesada (máx ~1.5MB). Probá con una más liviana.'); input.value=''; return; }
-  const reader=new FileReader();
-  reader.onload=function(ev){
+  if(!file.type || !file.type.startsWith('image/')) { alert('Elegí un archivo de imagen.'); input.value=''; return; }
+  try {
+    toast('⏳ Guardando foto...');
+    const dataUrl = await resizeWinnerImage(file);
+    // Firestore tiene límite de tamaño por documento. Guardamos una versión comprimida.
+    if(dataUrl.length > 650000) {
+      alert('La imagen sigue siendo muy pesada. Probá con una foto más chica o recortada.');
+      input.value='';
+      return;
+    }
     if(!S.settings) S.settings={};
     if(!S.settings.winnerImages) S.settings.winnerImages={};
-    S.settings.winnerImages[pos]=ev.target.result;
-    saveSettings();
+    S.settings.winnerImages[String(pos)] = dataUrl;
+    await saveSettings();
+    toast('✅ Foto guardada');
     renderTab();
-  };
-  reader.readAsDataURL(file);
+  } catch(e) {
+    console.error(e);
+    alert('No se pudo guardar la foto. Probá con otra imagen más liviana.');
+  } finally {
+    input.value='';
+  }
 };
 
 window.removeWinnerImage=function(pos){
