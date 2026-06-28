@@ -196,6 +196,34 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .rank-pts-big { font-family: var(--font-head); font-size: 30px; color: var(--green); }
 .you-tag { display: inline-block; background: var(--blue); color: white; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 1px 5px; margin-left: 5px; letter-spacing: 0.5px; }
 
+/* WINNERS (ganadores finales) */
+.winners-wrap { padding: 16px; background: var(--card); border-radius: 18px; margin: 12px; box-shadow: var(--shadow); }
+.winners-title { font-family: var(--font-head); font-size: 22px; letter-spacing: 1px; color: var(--text); text-align: center; margin-bottom: 18px; }
+.winners-list { display: flex; flex-direction: column; gap: 14px; }
+.win-card { display: flex; background: var(--card2); border-radius: 14px; overflow: hidden; border: 2px solid var(--border); min-height: 150px; box-shadow: var(--shadow); }
+.win-card.win-1 { border-color: var(--gold); box-shadow: 0 0 0 1px #d9770633, 0 4px 16px #d9770622; }
+.win-card.win-2 { border-color: #94a3b8; }
+.win-card.win-3 { border-color: #fb923c; }
+.win-photo { width: 50%; flex-shrink: 0; background: var(--border); position: relative; }
+.win-photo img { width: 100%; height: 100%; object-fit: cover; }
+.win-noimg { width: 100%; height: 100%; min-height: 150px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--muted); }
+.win-info { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.win-rank { display: flex; align-items: center; gap: 6px; }
+.win-medal { font-size: 18px; }
+.win-label { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+.win-name { font-family: var(--font-head); font-size: 22px; color: var(--text); line-height: 1.1; }
+.win-pts { font-size: 13px; color: var(--muted); font-weight: 700; }
+.win-prize { display: inline-block; align-self: flex-start; margin-top: 4px; color: #1a1205; font-weight: 900; font-size: 15px; padding: 4px 12px; border-radius: 8px; }
+.rest-title { font-family: var(--font-head); font-size: 15px; letter-spacing: 1px; color: var(--muted); margin: 22px 0 10px; }
+.rest-card { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 12px; padding: 10px 14px; margin-bottom: 7px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+.rest-card.is-me { border-color: var(--blue); }
+.rest-pos { font-family: var(--font-head); font-size: 18px; color: var(--muted); width: 24px; text-align: center; }
+.rest-av { width: 32px; height: 32px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; flex-shrink: 0; }
+.rest-body { flex: 1; }
+.rest-name { font-size: 14px; font-weight: 800; color: var(--text); }
+.rest-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.rest-pts { font-family: var(--font-head); font-size: 22px; color: var(--green); }
+
 /* STATS BAR */
 .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
 .stat-box { background: white; border-radius: 14px; padding: 14px; text-align: center; box-shadow: var(--shadow); }
@@ -374,9 +402,10 @@ const MATCHES = [
   {id:70,grupo:'K',fecha:'Sáb 27 Jun',hora:'20:30',local:'RD de Congo',visita:'Uzbekistán',sede:'Atlanta'},
   {id:71,grupo:'L',fecha:'Sáb 27 Jun',hora:'18:00',local:'Inglaterra',visita:'Panamá',sede:'Nueva Jersey'},
   {id:72,grupo:'L',fecha:'Sáb 27 Jun',hora:'18:00',local:'Croacia',visita:'Ghana',sede:'Philadelphia'},
+  {id:73,grupo:'Desempate',fecha:'Dom 28 Jun',hora:'16:00',local:'Sudáfrica',visita:'Canadá',sede:'Desempate 2° y 3° puesto'},
 ];
 
-const GROUPS = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L'];
+const GROUPS = ['Todos','A','B','C','D','E','F','G','H','I','J','K','L','Desempate'];
 
 // ── MATCH LOCK: 1 hora antes del partido ──
 const MATCH_DATES = {
@@ -398,22 +427,21 @@ const MATCH_DATES = {
   61:'2026-06-27T00:00',62:'2026-06-27T00:00',63:'2026-06-26T21:00',64:'2026-06-26T21:00',
   65:'2026-06-26T16:00',66:'2026-06-26T16:00',67:'2026-06-27T23:00',68:'2026-06-27T23:00',
   69:'2026-06-27T20:30',70:'2026-06-27T20:30',71:'2026-06-27T18:00',72:'2026-06-27T18:00',
+  73:'2026-06-28T16:00',
 };
 
-// ── ORDEN CRONOLÓGICO ──
-// Las fechas/horas escritas en MATCHES no están en orden cronológico,
-// así que ordenamos la lista por la fecha/hora real (MATCH_DATES), por día y hora.
-// Esto afecta a todas las vistas (pronósticos y resultados) de forma uniforme.
-function matchSortKey(m) {
-  const dt = MATCH_DATES[m.id];
-  if (dt) return new Date(dt + '-03:00').getTime(); // horarios en ARG (UTC-3)
-  return Number.MAX_SAFE_INTEGER; // sin fecha conocida: al final
-}
-MATCHES.sort((a, b) => {
-  const diff = matchSortKey(a) - matchSortKey(b);
-  return diff !== 0 ? diff : a.id - b.id;
-});
+// ── DESEMPATE 2°/3° PUESTO ──
+const TIEBREAKER_MATCH_ID = 73;
+const TIEBREAKER_PLAYERS = ['daniela','maurizio'];
 
+function normName(name) {
+  return (name || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function canPredictMatch(matchId, userName) {
+  if (+matchId !== TIEBREAKER_MATCH_ID) return true;
+  return TIEBREAKER_PLAYERS.includes(normName(userName));
+}
 // ── SINCRONIZACIÓN DE HORA (no depende del reloj del celular) ──
 let serverTimeOffset = 0;   // diferencia en ms entre la hora real y el reloj local
 let timeSynced = false;     // true solo si pudimos obtener la hora real
@@ -499,8 +527,7 @@ let S = {
   players: {},
   results: {},
   locks: {}, // bloqueos manuales del admin: { matchId: true }
-  resultAudit: {}, // auditoría de carga de resultados: { matchId: {updatedAt, updatedBy, l, v} }
-  predictionAudit: {}, // auditoría de pronósticos: { jugador: { matchId: {savedAt, savedBy, l, v} } }
+  settings: {}, // config global del admin (ej: imágenes de ganadores) { winnerImages: {1,2,3} }
   tab: 'fixture',
   matchIndex: 0,
   groupFilter: 'Todos',
@@ -528,19 +555,17 @@ const db = firebase.firestore();
 // ── STORAGE ──
 async function loadAll() {
   try {
-    const [pr, rr, lr, ar, pa] = await Promise.all([
+    const [pr, rr, lr, sr] = await Promise.all([
       db.collection('prode26').doc('players').get(),
       db.collection('prode26').doc('results').get(),
       db.collection('prode26').doc('locks').get(),
-      db.collection('prode26').doc('resultAudit').get(),
-      db.collection('prode26').doc('predictionAudit').get(),
+      db.collection('prode26').doc('settings').get(),
     ]);
     if (pr.exists) S.players = pr.data().data || {};
     if (rr.exists) S.results = rr.data().data || {};
     if (lr.exists) S.locks = lr.data().data || {};
-    if (ar.exists) S.resultAudit = ar.data().data || {};
-    if (pa.exists) S.predictionAudit = pa.data().data || {};
-  } catch(e) { S.players={}; S.results={}; S.locks={}; S.resultAudit={}; S.predictionAudit={}; }
+    if (sr.exists) S.settings = sr.data().data || {};
+  } catch(e) { S.players={}; S.results={}; S.locks={}; S.settings={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
 
@@ -558,11 +583,8 @@ async function loadAll() {
   db.collection('prode26').doc('locks').onSnapshot(snap => {
     if(snap.exists) { S.locks = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
-  db.collection('prode26').doc('resultAudit').onSnapshot(snap => {
-    if(snap.exists) { S.resultAudit = snap.data().data || {}; if(S.screen==='main' && S.tab==='results') renderTab(); }
-  });
-  db.collection('prode26').doc('predictionAudit').onSnapshot(snap => {
-    if(snap.exists) { S.predictionAudit = snap.data().data || {}; if(S.screen==='main' && S.tab==='auditoria') renderTab(); }
+  db.collection('prode26').doc('settings').onSnapshot(snap => {
+    if(snap.exists) { S.settings = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
 }
 
@@ -575,11 +597,8 @@ async function saveResults() {
 async function saveLocks() {
   try { await db.collection('prode26').doc('locks').set({ data: S.locks }); } catch(e){ console.error(e); }
 }
-async function saveResultAudit() {
-  try { await db.collection('prode26').doc('resultAudit').set({ data: S.resultAudit }); } catch(e){ console.error(e); }
-}
-async function savePredictionAudit() {
-  try { await db.collection('prode26').doc('predictionAudit').set({ data: S.predictionAudit }); } catch(e){ console.error(e); }
+async function saveSettings() {
+  try { await db.collection('prode26').doc('settings').set({ data: S.settings }); } catch(e){ console.error(e); }
 }
 
 // ── UTILS ──
@@ -706,7 +725,6 @@ function renderMain(app) {
     <div class="tab ${S.tab==='comparar'?'active':''}" onclick="setTab('comparar')">Comparar</div>
     ${S.isAdmin?`<div class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Resultados ⚙️</div>`:''}
     ${S.isAdmin?`<div class="tab ${S.tab==='pagos'?'active':''}" onclick="setTab('pagos')">Pagos 💳</div>`:''}
-    ${S.isAdmin?`<div class="tab ${S.tab==='auditoria'?'active':''}" onclick="setTab('auditoria')">Auditoría 🕒</div>`:''}
     <div class="tab ${S.tab==='rules'?'active':''}" onclick="setTab('rules')">Reglas</div>
   </div>
   <div id="tabContent"></div>`;
@@ -721,7 +739,6 @@ function renderTab() {
   else if(S.tab==='comparar') el.innerHTML=buildComparar();
   else if(S.tab==='results') el.innerHTML=buildResults();
   else if(S.tab==='pagos') el.innerHTML=buildPagos();
-  else if(S.tab==='auditoria') el.innerHTML=buildAuditoriaPronosticos();
   else el.innerHTML=buildRules();
   attachInputListeners();
 }
@@ -748,6 +765,8 @@ function buildFixtureOneByOne() {
   const hasPred = pred.l!==''&&pred.v!=='';
   const hasResult = result&&result.l!==undefined&&result.v!==undefined;
   const locked = isMatchLocked(m.id);
+  const canPredict = canPredictMatch(m.id, S.user);
+  const inputDisabled = locked || !canPredict;
 
   let ptsBadge='';
   if(hasPred&&hasResult){
@@ -760,7 +779,9 @@ function buildFixtureOneByOne() {
   }
 
   const resultInfo = hasResult?`<div class="result-over" style="margin-bottom:12px;">Resultado final: ${result.l} - ${result.v}</div>`:'';
-  const lockBanner = locked?(hasResult?`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#16a34a;text-align:center;">✅ Partido finalizado</div>`:`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#dc2626;text-align:center;">🔒 Votación cerrada — el partido comienza en menos de 1 hora</div>`):'';
+  const lockBanner = !canPredict
+    ? `<div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#7c3aed;text-align:center;">🏁 Desempate 2° y 3° puesto — solo Daniela y Maurizio pueden cargar este pronóstico</div>`
+    : (locked?(hasResult?`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#16a34a;text-align:center;">✅ Partido finalizado</div>`:`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#dc2626;text-align:center;">🔒 Votación cerrada — el partido comienza en menos de 1 hora</div>`):'');
 
 
   const totalDone = MATCHES.filter(m=>{const p=preds[m.id];return p&&p.l!==''&&p.v!=='';}).length;
@@ -812,10 +833,10 @@ function buildFixtureOneByOne() {
             <span class="vs-label">VS</span>
             <div class="score-inputs">
               <input class="score-in ${hasPred?'has-val':''}" id="inL" type="number" min="0" max="20"
-                value="${hasPred?pred.l:''}" placeholder="0" ${locked?'disabled':''}>
+                value="${hasPred?pred.l:''}" placeholder="0" ${inputDisabled?'disabled':''}>
               <span class="score-dash">—</span>
               <input class="score-in ${hasPred?'has-val':''}" id="inV" type="number" min="0" max="20"
-                value="${hasPred?pred.v:''}" placeholder="0" ${locked?'disabled':''}>
+                value="${hasPred?pred.v:''}" placeholder="0" ${inputDisabled?'disabled':''}>
             </div>
           </div>
           <div class="team-big">
@@ -827,8 +848,8 @@ function buildFixtureOneByOne() {
       </div>
     </div>
 
-    <button class="btn-save ${hasPred?'saved':''}" id="btnSave" onclick="saveAndNext(${m.id})" ${locked?'disabled':''}>
-      ${locked?'🔒 VOTACIÓN CERRADA':hasPred?'✓ GUARDAR Y SIGUIENTE →':'💾 GUARDAR Y SIGUIENTE →'}
+    <button class="btn-save ${hasPred?'saved':''}" id="btnSave" onclick="saveAndNext(${m.id})" ${inputDisabled?'disabled':''}>
+      ${!canPredict?'🏁 SOLO DANIELA Y MAURIZIO':locked?'🔒 VOTACIÓN CERRADA':hasPred?'✓ GUARDAR Y SIGUIENTE →':'💾 GUARDAR Y SIGUIENTE →'}
     </button>
     <button class="skip-btn" onclick="goNext()" ${S.matchIndex===filtered.length-1?'disabled':''}>
       Saltar sin guardar →
@@ -837,6 +858,7 @@ function buildFixtureOneByOne() {
 }
 
 function getJornada(id) {
+  if(+id===TIEBREAKER_MATCH_ID)return 'Desempate';
   if(id<=24)return 1;
   if(id<=48)return 2;
   return 3;
@@ -857,7 +879,7 @@ function buildFixtureList() {
   const totalDone = MATCHES.filter(m=>{const p=preds[m.id];return p&&p.l!==''&&p.v!=='';}).length;
   const pct = Math.round(totalDone/MATCHES.length*100);
 
-  const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  const groups = ['A','B','C','D','E','F','G','H','I','J','K','L','Desempate'];
 
   return `<div class="fixture-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -936,23 +958,6 @@ function autoSaveHint() {
   if(btn) btn.style.opacity='1';
 }
 
-
-function recordPredictionAudit(matchId, l, v) {
-  if(!S.predictionAudit) S.predictionAudit = {};
-  if(!S.predictionAudit[S.user]) S.predictionAudit[S.user] = {};
-  const previous = S.predictionAudit[S.user][matchId] || {};
-  const stamp = new Date(Date.now() + serverTimeOffset).toISOString();
-  S.predictionAudit[S.user][matchId] = {
-    matchId: matchId,
-    savedAt: previous.savedAt || stamp,
-    updatedAt: stamp,
-    savedBy: S.user,
-    l: +l,
-    v: +v,
-    editCount: (previous.editCount || 0) + 1
-  };
-}
-
 // ── ACTIONS ──
 window.doJoin=async function(){
   const inp=document.getElementById('nameIn');
@@ -1027,6 +1032,49 @@ window.selectNewEmoji=async function(e){
   render();
 };
 
+function launchConfetti(){
+  if(document.getElementById('confettiCanvas')) return; // ya hay una corriendo
+  const canvas=document.createElement('canvas');
+  canvas.id='confettiCanvas';
+  canvas.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+  document.body.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  const DPR=window.devicePixelRatio||1;
+  function size(){ canvas.width=innerWidth*DPR; canvas.height=innerHeight*DPR; }
+  size();
+  const colors=['#16a34a','#3b82f6','#d97706','#ef4444','#fde047','#ffffff'];
+  const N=140, parts=[];
+  for(let i=0;i<N;i++){
+    parts.push({
+      x:Math.random()*canvas.width,
+      y:-Math.random()*canvas.height*0.5,
+      r:(Math.random()*6+4)*DPR,
+      c:colors[(Math.random()*colors.length)|0],
+      vy:(Math.random()*3+2)*DPR,
+      vx:(Math.random()*2-1)*DPR,
+      ang:Math.random()*Math.PI*2,
+      spin:(Math.random()*0.2-0.1)
+    });
+  }
+  const start=performance.now(), DUR=3500;
+  function frame(now){
+    const t=now-start;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.ang+=p.spin; p.vy+=0.03*DPR;
+      ctx.save();
+      ctx.translate(p.x,p.y); ctx.rotate(p.ang);
+      ctx.fillStyle=p.c;
+      ctx.globalAlpha=t>DUR-800?Math.max(0,(DUR-t)/800):1;
+      ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6);
+      ctx.restore();
+    });
+    if(t<DUR) requestAnimationFrame(frame);
+    else canvas.remove();
+  }
+  requestAnimationFrame(frame);
+}
+
 window.setTab=function(t){
   S.tab=t;
   // Si va a fixture, saltear al próximo partido por jugar
@@ -1047,6 +1095,7 @@ window.setTab=function(t){
     if(match) el.classList.toggle('active', match[1]===t);
   });
   renderTab();
+  if(t==='ranking') launchConfetti();
 };
 
 window.setGrp=function(g){S.groupFilter=g;S.matchIndex=0;renderTab();};
@@ -1054,19 +1103,20 @@ window.goPrev=function(){if(S.matchIndex>0){S.matchIndex--;renderTab();}};
 window.goNext=function(){const f=getFilteredMatches();if(S.matchIndex<f.length-1){S.matchIndex++;renderTab();}};
 
 window.saveCurrent=async function(matchId){
+  if(!canPredictMatch(matchId, S.user)){toast('🏁 Solo Daniela y Maurizio pueden cargar este desempate');renderTab();return;}
   const lIn=document.getElementById('inL'),vIn=document.getElementById('inV');
   const lv=lIn?lIn.value:'', vv=vIn?vIn.value:'';
   if(lv===''||vv===''){toast('⚠ Completá los dos marcadores');return;}
   if(!S.players[S.user])S.players[S.user]={predictions:{},joined:Date.now()};
   if(!S.players[S.user].predictions)S.players[S.user].predictions={};
   S.players[S.user].predictions[matchId]={l:+lv,v:+vv};
-  recordPredictionAudit(matchId, lv, vv);
-  await Promise.all([savePlayers(), savePredictionAudit()]);
+  await savePlayers();
   toast('✓ Pronóstico guardado');
   renderTab();
 };
 
 window.saveAndNext=async function(matchId){
+  if(!canPredictMatch(matchId, S.user)){toast('🏁 Solo Daniela y Maurizio pueden cargar este desempate');renderTab();return;}
   if(isMatchLocked(matchId)){toast('🔒 Este partido ya está cerrado');renderTab();return;}
   const lIn=document.getElementById('inL'),vIn=document.getElementById('inV');
   const lv=lIn?lIn.value:'', vv=vIn?vIn.value:'';
@@ -1074,8 +1124,7 @@ window.saveAndNext=async function(matchId){
   if(!S.players[S.user])S.players[S.user]={predictions:{},joined:Date.now()};
   if(!S.players[S.user].predictions)S.players[S.user].predictions={};
   S.players[S.user].predictions[matchId]={l:+lv,v:+vv};
-  recordPredictionAudit(matchId, lv, vv);
-  await Promise.all([savePlayers(), savePredictionAudit()]);
+  await savePlayers();
   toast('✓ Guardado');
   const f=getFilteredMatches();
   if(S.matchIndex<f.length-1){S.matchIndex++;renderTab();}
@@ -1083,23 +1132,10 @@ window.saveAndNext=async function(matchId){
 };
 
 window.setResult=async function(matchId,side,value){
-  if(!S.isAdmin) return;
   if(!S.results[matchId])S.results[matchId]={l:'',v:''};
   S.results[matchId][side]=value===''?'':+value;
   const r=S.results[matchId];
-  if(r.l!==''&&r.v!==''){
-    const stamp = new Date(Date.now() + serverTimeOffset).toISOString();
-    if(!S.resultAudit) S.resultAudit = {};
-    S.resultAudit[matchId] = {
-      matchId: matchId,
-      updatedAt: stamp,
-      updatedBy: S.user || 'admin',
-      l: +r.l,
-      v: +r.v
-    };
-    await Promise.all([saveResults(), saveResultAudit()]);
-    toast('✓ Resultado guardado con hora');
-  }
+  if(r.l!==''&&r.v!==''){await saveResults();toast('✓ Resultado guardado');}
 };
 
 // ── RANKING ──
@@ -1115,12 +1151,6 @@ function buildRanking() {
 
   if(!rows.length) return `<div class="rank-wrap"><div class="empty"><div class="empty-icon">🏆</div>Nadie registrado aún</div></div>`;
 
-  const myRank=rows.findIndex(r=>r.name===S.user)+1;
-  const me=rows.find(r=>r.name===S.user)||{pts:0,exact:0,done:0};
-
-  const posIcons=['🥇','🥈','🥉'];
-  const posClasses=['p1','p2','p3'];
-
   const totalPlayers = rows.length;
   const pool = totalPlayers * 10000;
   const prize1 = Math.round(pool * 0.60);
@@ -1128,49 +1158,45 @@ function buildRanking() {
   const prize3 = Math.round(pool * 0.10);
   const fmt = n => '$' + n.toLocaleString('es-AR');
 
-  return `<div class="rank-wrap">
-    <div class="stats-row">
-      <div class="stat-box"><div class="stat-n">${me.pts}</div><div class="stat-l">Mis puntos</div></div>
-      <div class="stat-box"><div class="stat-n">#${myRank}</div><div class="stat-l">Posición</div></div>
-      <div class="stat-box"><div class="stat-n">${me.exact}</div><div class="stat-l">Exactos</div></div>
-    </div>
+  const podium = [
+    { label:'PRIMER PUESTO', medal:'🥇', prize:prize1, accent:'#ffd700', cls:'win-1' },
+    { label:'SEGUNDO PUESTO', medal:'🥈', prize:prize2, accent:'#cbd5e1', cls:'win-2' },
+    { label:'TERCER PUESTO', medal:'🥉', prize:prize3, accent:'#fb923c', cls:'win-3' },
+  ];
+  const imgs = (S.settings && S.settings.winnerImages) || {};
 
-    <div style="margin-bottom:20px;">
-      <div style="font-family:var(--font-head);font-size:20px;letter-spacing:1px;margin-bottom:10px;text-align:center;">💵 POZO TOTAL: ${fmt(pool)}</div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-        <div style="background:linear-gradient(135deg,#ffd700,#ffec6e);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #ffd70044;">
-          <div style="font-size:32px;">💰</div>
-          <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:2px;">1° PREMIO · 60%</div>
-          <div style="font-size:18px;font-weight:900;color:#78350f;">${fmt(prize1)}</div>
-          ${rows[0]?`<div style="font-size:11px;color:#92400e;margin-top:4px;font-weight:700;">${rows[0].name}</div>`:''}
-        </div>
-        <div style="background:linear-gradient(135deg,#cbd5e1,#f1f5f9);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #94a3b844;">
-          <div style="font-size:32px;">💰</div>
-          <div style="font-size:11px;font-weight:800;color:#475569;margin-bottom:2px;">2° PREMIO · 30%</div>
-          <div style="font-size:18px;font-weight:900;color:#334155;">${fmt(prize2)}</div>
-          ${rows[1]?`<div style="font-size:11px;color:#475569;margin-top:4px;font-weight:700;">${rows[1].name}</div>`:''}
-        </div>
-        <div style="background:linear-gradient(135deg,#fed7aa,#fef3c7);border-radius:14px;padding:14px 20px;text-align:center;min-width:100px;flex:1;max-width:140px;box-shadow:0 2px 8px #fb923c44;">
-          <div style="font-size:32px;">💰</div>
-          <div style="font-size:11px;font-weight:800;color:#c2410c;margin-bottom:2px;">3° PREMIO · 10%</div>
-          <div style="font-size:18px;font-weight:900;color:#9a3412;">${fmt(prize3)}</div>
-          ${rows[2]?`<div style="font-size:11px;color:#c2410c;margin-top:4px;font-weight:700;">${rows[2].name}</div>`:''}
-        </div>
+  const winnerCards = rows.slice(0,3).map((r,i)=>{
+    const p = podium[i];
+    const img = imgs[i+1];
+    const pic = img
+      ? `<img src="${img}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover;display:block;">`
+      : `<div class="win-noimg">${r.av||r.name.charAt(0).toUpperCase()}</div>`;
+    return `<div class="win-card ${p.cls}">
+      <div class="win-photo">${pic}</div>
+      <div class="win-info">
+        <div class="win-rank"><span class="win-medal">${p.medal}</span><span class="win-label">${p.label}</span></div>
+        <div class="win-name">${r.name}${r.name===S.user?'<span class="you-tag" style="background:#16a34a;">VOS</span>':''}</div>
+        <div class="win-pts">${r.pts} pts</div>
+        <div class="win-prize" style="background:${p.accent};">${fmt(p.prize)}</div>
       </div>
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">Cada jugador aporta $10.000 · ${totalPlayers} jugador${totalPlayers!==1?'es':''} inscripto${totalPlayers!==1?'s':''}</div>
-    </div>
+    </div>`;
+  }).join('');
 
-    <div style="font-family:var(--font-head);font-size:24px;letter-spacing:1px;margin-bottom:14px;">🏆 Ranking</div>
-    ${rows.map((r,i)=>`
-      <div class="rank-card ${r.name===S.user?'is-me':''}">
-        <div class="rank-pos ${posClasses[i]||'pn'}">${posIcons[i]||i+1}</div>
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;color:white;overflow:hidden;flex-shrink:0;">${r.av?r.av:r.name.charAt(0).toUpperCase()}</div>
-        <div class="rank-body">
-          <div class="rank-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}${(S.players[r.name]||{}).isAdmin?'<span class="you-tag" style="background:#7c3aed;">ADMIN</span>':''}${(S.players[r.name]||{}).verified?'<span style="font-size:14px;margin-left:4px;" title="Pago verificado">⭐</span>':''}</div>
-          <div class="rank-sub">⭐ ${r.exact} exactos · ✓ ${r.correct} resultados · ${r.done} pronósticos</div>
-        </div>
-        <div class="rank-pts-big">${r.pts}</div>
-      </div>`).join('')}
+  const rest = rows.slice(3).map((r,i)=>`
+    <div class="rest-card ${r.name===S.user?'is-me':''}">
+      <div class="rest-pos">${i+4}</div>
+      <div class="rest-av">${r.av?r.av:r.name.charAt(0).toUpperCase()}</div>
+      <div class="rest-body">
+        <div class="rest-name">${r.name}${r.name===S.user?'<span class="you-tag">VOS</span>':''}</div>
+        <div class="rest-sub">⭐ ${r.exact} exactos · ✓ ${r.correct} resultados</div>
+      </div>
+      <div class="rest-pts">${r.pts}</div>
+    </div>`).join('');
+
+  return `<div class="winners-wrap">
+    <div class="winners-title">🏆 Ganadores finales</div>
+    <div class="winners-list">${winnerCards}</div>
+    ${rest?`<div class="rest-title">Tabla general</div>${rest}`:''}
   </div>`;
 }
 
@@ -1331,161 +1357,51 @@ function buildPagos() {
         </div>`;
       }).join('')
     }
+
+    <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;margin:26px 0 10px;">🏆 Imágenes de ganadores</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Subí una foto para cada puesto. Se mostrará a todos en la pestaña Ranking.</div>
+    ${[1,2,3].map(pos=>{
+      const labels={1:'🥇 Primer puesto',2:'🥈 Segundo puesto',3:'🥉 Tercer puesto'};
+      const img=((S.settings||{}).winnerImages||{})[pos];
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin-bottom:8px;background:var(--card);border:1px solid var(--border);">
+        <div style="width:54px;height:54px;border-radius:10px;overflow:hidden;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${img?`<img src="${img}" style="width:100%;height:100%;object-fit:cover;">`:'🖼'}</div>
+        <div style="flex:1;font-size:14px;font-weight:800;">${labels[pos]}</div>
+        <label style="padding:7px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:800;background:#eff6ff;color:#2563eb;">
+          ${img?'Cambiar':'Subir'}
+          <input type="file" accept="image/*" style="display:none;" onchange="uploadWinnerImage(${pos},this)">
+        </label>
+        ${img?`<button onclick="removeWinnerImage(${pos})" style="padding:7px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:800;background:#fee2e2;color:#dc2626;">✕</button>`:''}
+      </div>`;
+    }).join('')}
   </div>`;
 }
 
-// ── EXPORTAR AUDITORÍA DE RESULTADOS (admin) ──
-function formatAuditDate(iso) {
-  if(!iso) return '';
-  try {
-    return new Date(iso).toLocaleString('es-AR', {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-  } catch(e) { return iso; }
-}
-function csvCell(v) {
-  const s = (v===undefined || v===null) ? '' : String(v);
-  return '"' + s.replace(/"/g, '""') + '"';
-}
-window.downloadResultsExcel = function(onlyPending=false) {
-  if(!S.isAdmin) return;
-  const rows = [[
-    'ID','Grupo','Fecha partido','Hora partido','Local','Goles local','Goles visita','Visitante',
-    'Resultado cargado el','Resultado cargado por','Timestamp ISO','Estado'
-  ]];
-  MATCHES.forEach(m => {
-    const r = (S.results && S.results[m.id]) || {};
-    const a = (S.resultAudit && S.resultAudit[m.id]) || {};
-    const done = r.l!==undefined && r.l!=='' && r.v!==undefined && r.v!=='';
-    if(onlyPending && done) return;
-    rows.push([
-      m.id, m.grupo, m.fecha, m.hora + ' ARG', m.local,
-      done ? r.l : '', done ? r.v : '', m.visita,
-      a.updatedAt ? formatAuditDate(a.updatedAt) : '',
-      a.updatedBy || '',
-      a.updatedAt || '',
-      done ? (a.updatedAt ? 'Cargado con auditoría' : 'Cargado sin hora registrada') : 'Pendiente'
-    ]);
-  });
-  const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = onlyPending ? 'prode-resultados-pendientes.csv' : 'prode-auditoria-resultados.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  toast('📥 Archivo para Excel descargado');
+window.uploadWinnerImage=function(pos,input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  if(file.size>1500000){ alert('La imagen es muy pesada (máx ~1.5MB). Probá con una más liviana.'); input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    if(!S.settings) S.settings={};
+    if(!S.settings.winnerImages) S.settings.winnerImages={};
+    S.settings.winnerImages[pos]=ev.target.result;
+    saveSettings();
+    renderTab();
+  };
+  reader.readAsDataURL(file);
 };
 
-
-// ── AUDITORÍA DE PRONÓSTICOS (admin) ──
-function getPredictionAuditFor(player, matchId) {
-  return (S.predictionAudit && S.predictionAudit[player] && S.predictionAudit[player][matchId]) || null;
-}
-window.downloadPredictionExcel = function(onlyRemaining=false) {
-  if(!S.isAdmin) return;
-  const rows = [[
-    'Jugador','ID partido','Grupo','Fecha partido','Hora partido','Local','Pronóstico local','Pronóstico visita','Visitante',
-    'Primer guardado','Última modificación','Timestamp ISO','Cantidad de guardados','Estado'
-  ]];
-  const players = Object.keys(S.players || {}).sort((a,b)=>a.localeCompare(b,'es'));
-  const now = nowReal();
-  players.forEach(name => {
-    const preds = (S.players[name] && S.players[name].predictions) || {};
-    MATCHES.forEach(m => {
-      const dt = MATCH_DATES[m.id] ? new Date(MATCH_DATES[m.id] + '-03:00') : null;
-      if(onlyRemaining && dt && dt <= now) return;
-      const p = preds[m.id] || {};
-      const hasPred = p.l!==undefined && p.l!=='' && p.v!==undefined && p.v!=='';
-      const a = getPredictionAuditFor(name, m.id);
-      rows.push([
-        name, m.id, m.grupo, m.fecha, m.hora + ' ARG', m.local,
-        hasPred ? p.l : '', hasPred ? p.v : '', m.visita,
-        a && a.savedAt ? formatAuditDate(a.savedAt) : '',
-        a && a.updatedAt ? formatAuditDate(a.updatedAt) : '',
-        a && a.updatedAt ? a.updatedAt : '',
-        a && a.editCount ? a.editCount : '',
-        hasPred ? (a && a.updatedAt ? 'Con hora registrada' : 'Cargado antes de auditoría / sin hora') : 'Sin pronóstico'
-      ]);
-    });
-  });
-  const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = onlyRemaining ? 'prode-auditoria-pronosticos-partidos-restantes.csv' : 'prode-auditoria-pronosticos.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  toast('📥 Auditoría de pronósticos descargada');
+window.removeWinnerImage=function(pos){
+  if(S.settings&&S.settings.winnerImages){ delete S.settings.winnerImages[pos]; saveSettings(); renderTab(); }
 };
-
-function buildAuditoriaPronosticos() {
-  if(!S.isAdmin) return `<div class="empty"><div class="empty-icon">🔒</div>Solo admin</div>`;
-  const players = Object.keys(S.players || {}).sort((a,b)=>a.localeCompare(b,'es'));
-  let totalPreds = 0, conHora = 0, sinHora = 0;
-  players.forEach(name => {
-    const preds = (S.players[name] && S.players[name].predictions) || {};
-    Object.keys(preds).forEach(mid => {
-      const p = preds[mid];
-      if(p && p.l!==undefined && p.l!=='' && p.v!==undefined && p.v!=='') {
-        totalPreds++;
-        if(getPredictionAuditFor(name, mid)?.updatedAt) conHora++;
-        else sinHora++;
-      }
-    });
-  });
-  const recent = [];
-  players.forEach(name => {
-    const audits = (S.predictionAudit && S.predictionAudit[name]) || {};
-    Object.values(audits).forEach(a => {
-      const m = MATCHES.find(x => x.id == a.matchId);
-      if(m) recent.push({name, a, m});
-    });
-  });
-  recent.sort((x,y)=>new Date(y.a.updatedAt||0)-new Date(x.a.updatedAt||0));
-  return `<div class="results-wrap">
-    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
-      <div style="font-weight:800;margin-bottom:8px;">🕒 Auditoría de pronósticos</div>
-      <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">Desde esta versión, cada vez que un jugador guarda o modifica un pronóstico se registra fecha, hora, jugador, partido y marcador. Los pronósticos cargados antes de esta actualización figuran como “sin hora registrada”.</div>
-      <button class="btn-sm" onclick="downloadPredictionExcel(false)" style="background:#2563eb;color:white;border-color:#2563eb;margin-right:6px;">Descargar Excel/CSV completo</button>
-      <button class="btn-sm" onclick="downloadPredictionExcel(true)">Solo partidos restantes</button>
-    </div>
-    <div class="stats-row">
-      <div class="stat-box"><div class="stat-n">${totalPreds}</div><div class="stat-l">Pronósticos</div></div>
-      <div class="stat-box"><div class="stat-n">${conHora}</div><div class="stat-l">Con hora</div></div>
-      <div class="stat-box"><div class="stat-n">${sinHora}</div><div class="stat-l">Sin hora previa</div></div>
-    </div>
-    <div style="font-family:var(--font-head);font-size:18px;letter-spacing:1px;margin-bottom:10px;">Últimos guardados</div>
-    ${recent.length===0?`<div class="empty"><div class="empty-icon">⏳</div>Todavía no hay pronósticos guardados con auditoría.</div>`:
-      recent.slice(0,80).map(({name,a,m})=>`<div class="res-card">
-        <div class="res-header"><span class="res-group">${name} · Grupo ${m.grupo}</span><span class="res-date">${formatAuditDate(a.updatedAt)}</span></div>
-        <div style="font-size:13px;font-weight:800;">${m.local} ${a.l} - ${a.v} ${m.visita}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Partido ${m.id} · ${m.fecha} ${m.hora} ARG · guardados: ${a.editCount||1}</div>
-      </div>`).join('')}
-  </div>`;
-}
 
 // ── RESULTS (admin) ──
 function buildResults() {
   const filtered = S.groupFilter==='Todos'?MATCHES:MATCHES.filter(m=>m.grupo===S.groupFilter);
 
   return `<div class="results-wrap">
-    <div style="background:var(--gold-light);border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--gold);">
+    <div style="background:var(--gold-light);border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:var(--gold);">
       ⚙ Modo admin — ingresá los marcadores reales para calcular puntos
-    </div>
-    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1d4ed8;">
-      <div style="font-weight:800;margin-bottom:8px;">📊 Auditoría de resultados</div>
-      <div style="font-size:12px;margin-bottom:10px;line-height:1.4;">Desde esta versión, cada resultado final guarda fecha, hora y usuario admin que lo cargó. Los resultados cargados antes de esta actualización figuran como “sin hora registrada”.</div>
-      <button class="btn-sm" onclick="downloadResultsExcel(false)" style="background:#2563eb;color:white;border-color:#2563eb;margin-right:6px;">Descargar Excel/CSV</button>
-      <button class="btn-sm" onclick="downloadResultsExcel(true)">Solo pendientes</button>
     </div>
     <div class="filter-row">
       ${GROUPS.map(g=>`<button class="f-btn ${S.groupFilter===g?'active':''}" onclick="setGrp('${g}')">${g}</button>`).join('')}
@@ -1518,7 +1434,6 @@ function buildResults() {
           ${lockStatus}
           <button class="lock-btn ${manualLock?'locked':''}" onclick="toggleLock(${m.id})">${manualLock?'🔓 Reabrir':'🔒 Bloquear'}</button>
         </div>
-        ${done ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);font-weight:700;">🕒 Cargado: ${S.resultAudit && S.resultAudit[m.id] && S.resultAudit[m.id].updatedAt ? formatAuditDate(S.resultAudit[m.id].updatedAt) + ' · por ' + (S.resultAudit[m.id].updatedBy || 'admin') : 'sin hora registrada'}</div>` : ''}
       </div>`;
     }).join('')}
   </div>`;
