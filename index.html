@@ -510,13 +510,14 @@ window.toggleLock = async function(matchId) {
 
 
 // Puntuación: exacto = 3 pts, resultado = 2 pts
-function calcPoints(pred, real) {
+function calcPoints(pred, real, matchId) {
   if (!pred || pred.l==='' || pred.v==='' || !real || real.l===undefined || real.v===undefined) return -1;
   const pl=+pred.l, pv=+pred.v, rl=+real.l, rv=+real.v;
   if (isNaN(pl)||isNaN(pv)||isNaN(rl)||isNaN(rv)) return -1;
-  if (pl===rl && pv===rv) return 3;
+  const isDesempate = matchId === 73;
+  if (pl===rl && pv===rv) return isDesempate ? 0.5 : 3;
   const res = (x,y)=>x>y?'L':x<y?'V':'E';
-  if (res(pl,pv)===res(rl,rv)) return 1;
+  if (res(pl,pv)===res(rl,rv)) return isDesempate ? 0.25 : 1;
   return 0;
 }
 
@@ -556,36 +557,33 @@ const db = firebase.firestore();
 // ── STORAGE ──
 async function loadAll() {
   try {
-    const [pr, rr, lr, sr, wi1, wi2, wi3] = await Promise.all([
+    const [pr, rr, lr, sr] = await Promise.all([
       db.collection('prode26').doc('players').get(),
       db.collection('prode26').doc('results').get(),
       db.collection('prode26').doc('locks').get(),
       db.collection('prode26').doc('settings').get(),
-      db.collection('prode26_winnerImages').doc('1').get(),
-      db.collection('prode26_winnerImages').doc('2').get(),
-      db.collection('prode26_winnerImages').doc('3').get(),
     ]);
     if (pr.exists) S.players = pr.data().data || {};
     if (rr.exists) S.results = rr.data().data || {};
     if (lr.exists) S.locks = lr.data().data || {};
-    if (sr.exists) S.settings = sr.data().data || {};
-    S.winnerImages = {};
-    [wi1, wi2, wi3].forEach((docSnap, idx) => {
-      if(docSnap.exists) {
-        const d = docSnap.data() || {};
-        if(d.image) S.winnerImages[String(idx+1)] = d.image;
-      }
-    });
+    if (sr.exists) {
+      const sd = sr.data() || {};
+      S.settings = sd.data || {};
+      // Cargar fotos desde settings
+      S.winnerImages = {};
+      ['1','2','3'].forEach(pos => {
+        if(sd[`winnerImage_${pos}`]) S.winnerImages[pos] = sd[`winnerImage_${pos}`];
+      });
+    }
   } catch(e) { S.players={}; S.results={}; S.locks={}; S.settings={}; S.winnerImages={}; }
   try { S.user = localStorage.getItem('prode26:me'); } catch(e){}
   try { if(S.user) S.avatar = localStorage.getItem('prode26:avatar:' + S.user) || null; } catch(e){}
 
-  // Escuchar cambios en tiempo real
   db.collection('prode26').doc('players').onSnapshot(snap => {
     if(snap.exists) {
       S.players = snap.data().data || {};
       if(S.screen==='main') renderTab();
-      else if(S.screen==='welcome') render(); // actualiza premios en welcome
+      else if(S.screen==='welcome') render();
     }
   });
   db.collection('prode26').doc('results').onSnapshot(snap => {
@@ -595,20 +593,16 @@ async function loadAll() {
     if(snap.exists) { S.locks = snap.data().data || {}; if(S.screen==='main') renderTab(); }
   });
   db.collection('prode26').doc('settings').onSnapshot(snap => {
-    if(snap.exists) { S.settings = snap.data().data || {}; if(S.screen==='main') renderTab(); }
-  });
-  ['1','2','3'].forEach(pos => {
-    db.collection('prode26_winnerImages').doc(pos).onSnapshot(snap => {
-      if(!S.winnerImages) S.winnerImages = {};
-      if(snap.exists) {
-        const d = snap.data() || {};
-        if(d.image) S.winnerImages[pos] = d.image;
+    if(snap.exists) {
+      const sd = snap.data() || {};
+      S.settings = sd.data || {};
+      S.winnerImages = S.winnerImages || {};
+      ['1','2','3'].forEach(pos => {
+        if(sd[`winnerImage_${pos}`]) S.winnerImages[pos] = sd[`winnerImage_${pos}`];
         else delete S.winnerImages[pos];
-      } else {
-        delete S.winnerImages[pos];
-      }
+      });
       if(S.screen==='main') renderTab();
-    });
+    }
   });
 }
 
@@ -625,11 +619,19 @@ async function saveSettings() {
   try { await db.collection('prode26').doc('settings').set({ data: S.settings }); } catch(e){ console.error(e); }
 }
 async function saveWinnerImage(pos, imageData) {
-  const ref = db.collection('prode26_winnerImages').doc(String(pos));
-  if(imageData) {
-    await ref.set({ image: imageData, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: S.user || '' });
-  } else {
-    await ref.delete();
+  try {
+    const ref = db.collection('prode26').doc('settings');
+    const field = `winnerImage_${pos}`;
+    if(imageData) {
+      await ref.set({ [field]: imageData }, { merge: true });
+    } else {
+      const update = {};
+      update[field] = firebase.firestore.FieldValue.delete();
+      await ref.update(update);
+    }
+  } catch(e) {
+    console.error('saveWinnerImage error:', e);
+    throw e;
   }
 }
 
@@ -648,7 +650,7 @@ function calcUserPoints(name) {
   const preds = (S.players[name]||{}).predictions||{};
   let pts=0;
   MATCHES.forEach(m=>{
-    const p=calcPoints(preds[m.id], S.results[m.id]);
+    const p=calcPoints(preds[m.id], S.results[m.id], m.id);
     if(p>0) pts+=p;
   });
   return pts;
@@ -802,7 +804,7 @@ function buildFixtureOneByOne() {
 
   let ptsBadge='';
   if(hasPred&&hasResult){
-    const p=calcPoints(pred,result);
+    const p=calcPoints(pred,result,m.id);
     if(p===3) ptsBadge=`<div class="pts-badges"><span class="badge badge-exact">⭐ ¡Exacto! +3 pts</span></div>`;
     else if(p===1) ptsBadge=`<div class="pts-badges"><span class="badge badge-result">✓ Resultado correcto +1 pt</span></div>`;
     else ptsBadge=`<div class="pts-badges"><span class="badge badge-wrong">✗ Sin puntos esta vez</span></div>`;
@@ -937,7 +939,7 @@ function buildFixtureList() {
           const result = S.results[m.id];
           const hasResult = result && result.l!==undefined && result.v!==undefined;
           const locked = isMatchLocked(m.id);
-          const pts = hasPred && hasResult ? calcPoints(pred, result) : null;
+          const pts = hasPred && hasResult ? calcPoints(pred, result, m.id) : null;
 
           let rowBg = 'background:var(--card);';
           let badge = '';
@@ -1176,7 +1178,7 @@ function buildRanking() {
     const pts=calcUserPoints(name), done=countPredicted(name);
     const preds=(S.players[name]||{}).predictions||{};
     let exact=0,correct=0;
-    MATCHES.forEach(m=>{const p=calcPoints(preds[m.id],S.results[m.id]);if(p===3)exact++;if(p===1||p===3)correct++;});
+    MATCHES.forEach(m=>{const p=calcPoints(preds[m.id],S.results[m.id],m.id);if(p===3)exact++;if(p===1||p===3)correct++;});
     let av=(S.players[name]||{}).avatar||null;
     return {name,pts,done,exact,correct,av};
   }).sort((a,b)=>b.pts-a.pts||b.exact-a.exact||b.done-a.done);
@@ -1300,7 +1302,7 @@ function buildComparar() {
             ${players.length === 0 ? '<div style="font-size:12px;color:var(--muted);">Sin jugadores</div>' :
               players.map(name => {
                 const pred = ((S.players[name]||{}).predictions||{})[m.id];
-                const pts = calcPoints(pred, r);
+                const pts = calcPoints(pred, r, m.id);
                 let badge = '';
                 let rowBg = '';
                 if(pts === 3){ badge=`<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;">⭐ +3</span>`; rowBg='background:#f0fdf4;'; }
